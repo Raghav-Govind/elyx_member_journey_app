@@ -8,7 +8,9 @@ import { createPortal } from "react-dom";
 
 
 import { motion } from "framer-motion";
-import { Sun, Moon, Search, Upload, MessageSquare, Activity, Users, CalendarDays, Info, Filter } from "lucide-react";
+import { Sun, Moon, Search, Upload, MessageSquare, Activity, Users, CalendarDays, Info, Filter, ArrowUpRight, ArrowDownRight } from "lucide-react";
+
+
 
 const Card = ({ className = "", children, ...props }) => (
   <div
@@ -32,40 +34,53 @@ function isTravelDay(date, trips) {
   return (trips || []).some(t => inRange(date, new Date(t.start_at), new Date(t.end_at)));
 }
 
-function genWearableDaily(startISO, endISO, trips) {
-  const start = new Date(startISO), end = new Date(endISO);
-  const out = [];
-  // slow improvement phases that reflect plan adherence (better HRV & Recovery after certain dates)
-  const phase = (day) => {
-    if (day >= new Date("2025-04-15")) return { hrvBoost: +2.2, recBoost: +4 };   // after D01 + I0008
-    if (day >= new Date("2025-03-20")) return { hrvBoost: +1.2, recBoost: +2 };   // after I0005 trial starts
-    return { hrvBoost: 0, recBoost: 0 };
-  };
-  for (let d = new Date(start), i = 0; d <= end; d.setDate(d.getDate() + 1), i++) {
-    const weekly = Math.sin((2 * Math.PI * (i % 7)) / 7);        // weekly rhythm
-    const circ = Math.sin(i * 0.12) * 0.6 + Math.cos(i * 0.07) * 0.4; // low-freq mix
-    const travelPenalty = isTravelDay(d, trips) ? -3.0 : 0;
-    const p = phase(d);
 
-    const baseHRV = 43 + 1.5 * (i / 90);                     // slow upward trend across period
-    const hrv = Math.max(32, Math.min(78, baseHRV + 2 * weekly + circ + travelPenalty + p.hrvBoost));
-    const recovery = Math.max(30, Math.min(95, 48 + (hrv - 43) * 1.2 + (weekly * 4) + p.recBoost));
-    const deep = Math.max(45, Math.min(120, Math.round(65 + (hrv - 43) * 0.9 + Math.cos(i * 0.7) * 8)));
-    const rem = Math.max(75, Math.min(150, Math.round(90 + (hrv - 43) * 0.7 + Math.sin(i * 0.6) * 8)));
-    const steps = Math.max(2500, Math.min(18000, Math.round(9000 + (hrv - 43) * 110 + Math.cos(i * 0.3) * 3500)));
 
-    out.push({
-      date: d.toISOString().slice(0, 10),
-      member_id: "M0001",
-      HRV_ms: +hrv.toFixed(1),
-      recovery_pct: Math.round(recovery),
-      deep_sleep_min: deep,
-      rem_sleep_min: rem,
-      steps
-    });
-  }
-  return out;
-}
+// --- HARD-CODED WEARABLE DATA (no generation) ---
+// Range targets used below (46y male):
+// HRV 38–65 ms • Recovery 55–90% • Deep 75–110 min • REM 90–140 min • Steps 8k–11k
+const WEARABLE_HARDCODED = [
+  { date: "2025-03-01", member_id: "M0001", HRV_ms: 41.2, recovery_pct: 49, deep_sleep_min: 72, rem_sleep_min: 96, steps: 7800 },
+  { date: "2025-03-02", member_id: "M0001", HRV_ms: 42.0, recovery_pct: 50, deep_sleep_min: 76, rem_sleep_min: 98, steps: 8200 },
+  { date: "2025-03-03", member_id: "M0001", HRV_ms: 39.5, recovery_pct: 51, deep_sleep_min: 74, rem_sleep_min: 95, steps: 7600 },
+  { date: "2025-03-04", member_id: "M0001", HRV_ms: 36.8, recovery_pct: 48, deep_sleep_min: 70, rem_sleep_min: 92, steps: 7300 },  // HRV + Recovery below range (red)
+  { date: "2025-03-05", member_id: "M0001", HRV_ms: 40.3, recovery_pct: 52, deep_sleep_min: 78, rem_sleep_min: 97, steps: 8600 },
+  { date: "2025-03-06", member_id: "M0001", HRV_ms: 44.1, recovery_pct: 53, deep_sleep_min: 80, rem_sleep_min: 100, steps: 9100 },
+  { date: "2025-03-07", member_id: "M0001", HRV_ms: 46.0, recovery_pct: 55, deep_sleep_min: 82, rem_sleep_min: 102, steps: 9800 },  // Recovery enters green
+  { date: "2025-03-08", member_id: "M0001", HRV_ms: 38.0, recovery_pct: 54, deep_sleep_min: 76, rem_sleep_min: 96, steps: 8200 },
+  { date: "2025-03-09", member_id: "M0001", HRV_ms: 37.4, recovery_pct: 52, deep_sleep_min: 75, rem_sleep_min: 94, steps: 8000 },  // HRV red (below)
+  { date: "2025-03-10", member_id: "M0001", HRV_ms: 43.2, recovery_pct: 56, deep_sleep_min: 84, rem_sleep_min: 104, steps: 10500 },
+  { date: "2025-03-11", member_id: "M0001", HRV_ms: 45.0, recovery_pct: 57, deep_sleep_min: 88, rem_sleep_min: 108, steps: 11200 }, // Steps above (good-out)
+  { date: "2025-03-12", member_id: "M0001", HRV_ms: 47.5, recovery_pct: 58, deep_sleep_min: 90, rem_sleep_min: 110, steps: 11800 },
+  { date: "2025-03-13", member_id: "M0001", HRV_ms: 49.0, recovery_pct: 59, deep_sleep_min: 86, rem_sleep_min: 106, steps: 11500 },
+  { date: "2025-03-14", member_id: "M0001", HRV_ms: 51.2, recovery_pct: 60, deep_sleep_min: 92, rem_sleep_min: 112, steps: 9800 },  // Deep above (good-out)
+  { date: "2025-03-15", member_id: "M0001", HRV_ms: 52.6, recovery_pct: 58, deep_sleep_min: 88, rem_sleep_min: 104, steps: 9300 },
+  { date: "2025-03-16", member_id: "M0001", HRV_ms: 50.1, recovery_pct: 57, deep_sleep_min: 85, rem_sleep_min: 101, steps: 8700 },
+  { date: "2025-03-17", member_id: "M0001", HRV_ms: 48.4, recovery_pct: 55, deep_sleep_min: 82, rem_sleep_min: 100, steps: 8500 },
+  { date: "2025-03-18", member_id: "M0001", HRV_ms: 46.7, recovery_pct: 54, deep_sleep_min: 80, rem_sleep_min: 98, steps: 8200 },
+  { date: "2025-03-19", member_id: "M0001", HRV_ms: 44.9, recovery_pct: 53, deep_sleep_min: 78, rem_sleep_min: 96, steps: 7900 },
+  { date: "2025-03-20", member_id: "M0001", HRV_ms: 42.8, recovery_pct: 56, deep_sleep_min: 83, rem_sleep_min: 102, steps: 11000 },
+  { date: "2025-03-21", member_id: "M0001", HRV_ms: 41.0, recovery_pct: 55, deep_sleep_min: 81, rem_sleep_min: 100, steps: 12000 }, // Steps above (good-out)
+  { date: "2025-03-22", member_id: "M0001", HRV_ms: 39.2, recovery_pct: 53, deep_sleep_min: 77, rem_sleep_min: 98, steps: 9800 },
+  { date: "2025-03-23", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 52, deep_sleep_min: 79, rem_sleep_min: 97, steps: 9200 },
+  { date: "2025-03-24", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 57, deep_sleep_min: 84, rem_sleep_min: 105, steps: 10000 },
+  { date: "2025-03-25", member_id: "M0001", HRV_ms: 46.3, recovery_pct: 58, deep_sleep_min: 88, rem_sleep_min: 109, steps: 10800 },
+  { date: "2025-03-26", member_id: "M0001", HRV_ms: 48.9, recovery_pct: 59, deep_sleep_min: 90, rem_sleep_min: 112, steps: 12500 }, // Deep above + steps above
+  { date: "2025-03-27", member_id: "M0001", HRV_ms: 50.5, recovery_pct: 60, deep_sleep_min: 87, rem_sleep_min: 108, steps: 9900 },
+  { date: "2025-03-28", member_id: "M0001", HRV_ms: 52.0, recovery_pct: 58, deep_sleep_min: 85, rem_sleep_min: 104, steps: 9300 },
+  { date: "2025-03-29", member_id: "M0001", HRV_ms: 49.8, recovery_pct: 57, deep_sleep_min: 82, rem_sleep_min: 101, steps: 8900 },
+  { date: "2025-03-30", member_id: "M0001", HRV_ms: 47.2, recovery_pct: 55, deep_sleep_min: 80, rem_sleep_min: 99, steps: 8600 },
+  { date: "2025-03-31", member_id: "M0001", HRV_ms: 45.5, recovery_pct: 54, deep_sleep_min: 78, rem_sleep_min: 97, steps: 8300 },
+  { date: "2025-04-01", member_id: "M0001", HRV_ms: 43.6, recovery_pct: 53, deep_sleep_min: 76, rem_sleep_min: 95, steps: 8000 },
+  { date: "2025-04-02", member_id: "M0001", HRV_ms: 41.9, recovery_pct: 56, deep_sleep_min: 83, rem_sleep_min: 102, steps: 10800 },
+  { date: "2025-04-03", member_id: "M0001", HRV_ms: 40.0, recovery_pct: 54, deep_sleep_min: 79, rem_sleep_min: 98, steps: 9700 },
+  { date: "2025-04-04", member_id: "M0001", HRV_ms: 38.3, recovery_pct: 53, deep_sleep_min: 77, rem_sleep_min: 96, steps: 9400 },
+  { date: "2025-04-05", member_id: "M0001", HRV_ms: 39.0, recovery_pct: 52, deep_sleep_min: 74, rem_sleep_min: 94, steps: 9000 },  // Deep below (red)
+  { date: "2025-04-06", member_id: "M0001", HRV_ms: 42.5, recovery_pct: 58, deep_sleep_min: 85, rem_sleep_min: 105, steps: 11000 },
+  { date: "2025-04-07", member_id: "M0001", HRV_ms: 45.1, recovery_pct: 59, deep_sleep_min: 88, rem_sleep_min: 108, steps: 11800 },
+  { date: "2025-04-08", member_id: "M0001", HRV_ms: 47.6, recovery_pct: 61, deep_sleep_min: 92, rem_sleep_min: 112, steps: 12200 },
+  { date: "2025-04-09", member_id: "M0001", HRV_ms: 49.9, recovery_pct: 60, deep_sleep_min: 89, rem_sleep_min: 109, steps: 11500 }
+];
 
 
 
@@ -336,8 +351,9 @@ const EMBED = (() => {
 
   };
 
-  // 60 days of wearable + weekly internal metrics
-  base.wearable_daily = genWearableDaily("2025-03-01", "2025-05-01", base.trips);
+  base.wearable_daily = WEARABLE_HARDCODED;
+
+
   return base;
 })();
 
@@ -429,21 +445,16 @@ function answerQuestion(query, ctx) {
 
 // ------- Metric defs, ranges, and series helpers -------
 
-// Ranges tweaked by age/gender (simple heuristic for demo)
-function rangeHRV(age, gender) {
-  const yearsOver25 = Math.max(0, age - 25);
-  const lo = Math.max(25, Math.round(40 - yearsOver25 * 0.3));
-  const hi = Math.round(80 - yearsOver25 * 0.4);
-  return [lo, hi];
-}
-function rangeRecovery(age) { return [45, 95]; }
-function rangeDeepSleep(age) { return [60, 120]; }
-function rangeREM(age) { return [80, 150]; }
-function rangeSteps(age) { return [7000, 12000]; }
-function rangeLDL(age) { return [60, 100]; } // mg/dL
+function rangeHRV(age, gender) { return [38, 65]; }         // ms
+function rangeRecovery(age) { return [55, 90]; }         // %
+function rangeDeepSleep(age) { return [75, 110]; }        // min
+function rangeREM(age) { return [90, 140]; }        // min
+function rangeSteps(age) { return [8000, 11000]; }    // steps
+function rangeLDL(age) { return [60, 100]; }        // mg/dL (target band)
 function rangeApoB(age) { return [60, 90]; }
 function rangeHDL(age, gender) { return [gender === "Female" ? 50 : 40, 80]; }
-function rangehsCRP(age) { return [0.2, 2.0]; } // mg/L
+function rangehsCRP(age) { return [0.2, 2.0]; }       // mg/L
+
 
 // All 12 metrics (map labels to canonical IDs + ranges)
 const METRIC_DEFS = [
@@ -465,7 +476,22 @@ const METRIC_DEFS = [
 
 
 // Which direction is "good"
-const METRIC_DIRECTION = { HRV_ms: "up", recovery_pct: "up", HDL_C: "up", LDL_C: "down", ApoB: "down", hsCRP: "down" };
+// Which direction is "good" per metric
+const METRIC_DIRECTION = {
+  HRV_ms: "up",
+  recovery_pct: "up",
+  deep_sleep_min: "up",
+  rem_sleep_min: "up",
+  steps: "up",
+  HRV_7d: "up",
+  REC_7d: "up",
+  HRV_30d: "up",
+  HDL_C: "up",
+  LDL_C: "down",
+  ApoB: "down",
+  hsCRP: "down",
+};
+
 
 // "+4 to +6" or "−8" → {min,max}
 function parseDelta(val) {
@@ -505,6 +531,61 @@ function OutcomeBadge({ status }) {
   const label = { met: "Met / Exceeded", partial: "Partially met", missed: "Missed", na: "N/A" }[status] || "N/A";
   return <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs border ${map[status]}`}>{label}</span>;
 }
+
+
+function DeltaStatCard({ label, delta, unit, pct, direction = "up" }) {
+  const d = Math.round(delta ?? 0);
+  const pctNum = Math.round(pct ?? 0);
+  const good = direction === "down" ? d <= 0 : d >= 0;
+
+  const valueCls = good
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-rose-600 dark:text-rose-400";
+
+  const badgeCls = good
+    ? "text-emerald-700 border-emerald-300 bg-emerald-50/90 dark:text-emerald-200 dark:border-emerald-700 dark:bg-emerald-900/30"
+    : "text-rose-700 border-rose-300 bg-rose-50/90 dark:text-rose-200 dark:border-rose-700 dark:bg-rose-900/30";
+
+  return (
+    <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/80 dark:bg-zinc-900/70 overflow-hidden">
+      {/* title can wrap; never overflow */}
+      <div className="text-xs text-zinc-500 mb-2 break-words">{label}</div>
+
+      {/* value on its own line (smaller, unit inline) */}
+      <div className={`text-lg font-semibold tabular-nums ${valueCls}`}>
+        {d > 0 ? "+" : ""}{d}{unit ? <span className="ml-1 text-sm opacity-85">{unit}</span> : null}
+      </div>
+
+      {/* badge ALWAYS below the value */}
+      <div className="mt-1">
+        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border leading-none ${badgeCls}`}>
+          {pctNum}% {good ? "improved" : "worse"}
+        </span>
+      </div>
+
+      {/* footer text — wraps inside the card */}
+      <div className="mt-2 flex items-start gap-2 text-xs text-zinc-500 leading-snug break-words">
+        {good ? (
+          <svg className="mt-0.5 w-4 h-4 text-emerald-500 shrink-0" viewBox="0 0 24 24" fill="none">
+            <path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : (
+          <svg className="mt-0.5 w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none">
+            <path d="M7 7l10 10M17 17H9M17 17V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+        <span className="min-w-0">
+          {good ? "Positive" : "Negative"} change vs first 14 days
+        </span>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
 
 
 // tiny utilities
@@ -590,13 +671,22 @@ function buildLDLDaily(diagnostics, startISO, endISO) {
 
 
 // Segment a series into in-range vs out-of-range lines (so we can color them)
-function makeSegmented(series, lo, hi) {
-  return series.map(p => ({
-    date: p.date,
-    inRange: p.value != null && p.value >= lo && p.value <= hi ? p.value : null,
-    outRange: p.value != null && (p.value < lo || p.value > hi) ? p.value : null
-  }));
+// Segment with direction-aware good/bad out-of-range
+function makeSegmented(series, lo, hi, direction = "up") {
+  return series.map(p => {
+    const v = p.value == null ? null : Number(p.value);
+    if (v == null) return { date: p.date, inRange: null, goodOut: null, badOut: null };
+
+    const inR = v >= lo && v <= hi;
+    if (inR) return { date: p.date, inRange: v, goodOut: null, badOut: null };
+
+    const above = v > hi;
+    const below = v < lo;
+    const good = direction === "up" ? above : below; // e.g., steps↑ is good
+    return { date: p.date, inRange: null, goodOut: good ? v : null, badOut: !good ? v : null };
+  });
 }
+
 
 // ---- Decision Flow helpers & styles ----
 // ---- Decision Flow helpers ----
@@ -639,7 +729,8 @@ function DecisionFlowSVG({ decisions, onSelect, onHover, height = 220, compact =
   const padX = 40;
   const gap = 180;
   const width = Math.max(padX * 2 + (n - 1) * gap, 420);
-  const cy = compact ? height / 2 : 120;
+  const cy = Math.round(height * 0.5); // center vertically for both modes
+
 
   return (
     <div className="w-full overflow-x-auto">
@@ -840,6 +931,22 @@ export default function App() {
   const ctx = useMemo(() => ({ ...bundle, chat, rationales }), [bundle, chat, rationales]);
 
 
+  // Unified Recharts tooltip styles (dark/light aware)
+  const tooltipStyles = useMemo(() => ({
+    contentStyle: {
+      background: dark ? "rgba(24,24,27,0.98)" : "rgba(255,255,255,0.98)",
+      border: `1px solid ${dark ? "#3f3f46" : "#e4e4e7"}`,
+      borderRadius: 12,
+      boxShadow: dark ? "0 6px 24px rgba(0,0,0,0.35)" : "0 8px 24px rgba(0,0,0,0.10)",
+      color: dark ? "#e4e4e7" : "#111827",
+    },
+    labelStyle: { color: dark ? "#a1a1aa" : "#52525b" },
+    itemStyle: { color: dark ? "#e4e4e7" : "#111827" },
+    wrapperStyle: { outline: "none" },
+  }), [dark]);
+
+
+
   const memberId = bundle.member?.member_id || "M0001";
 
   const roster = useMemo(() => {
@@ -890,6 +997,45 @@ export default function App() {
     const all = EMBED.chat || [];
     return ids.map(mid => all.find(m => m.message_id === mid)).filter(Boolean);
   }, [selRationale]);
+
+
+
+  function SeriesTooltip({ active, label, payload, dark, titleFmt, valueFormatter }) {
+    if (!active || !payload || !payload.length) return null;
+
+    const boxStyle = {
+      background: dark ? "rgba(24,24,27,0.98)" : "rgba(255,255,255,0.98)",
+      border: `1px solid ${dark ? "#3f3f46" : "#e4e4e7"}`,
+      borderRadius: 12,
+      boxShadow: dark ? "0 6px 24px rgba(0,0,0,0.35)" : "0 8px 24px rgba(0,0,0,0.10)",
+      color: dark ? "#e4e4e7" : "#111827",
+      padding: "10px 12px",
+    };
+    const labelStyle = { fontSize: 12, color: dark ? "#a1a1aa" : "#52525b" };
+
+    return (
+      <div style={boxStyle}>
+        <div style={labelStyle}>{titleFmt ? titleFmt(label) : label}</div>
+        <div className="mt-1 space-y-1">
+          {payload.map((it) => (
+            <div key={it.dataKey || it.name} className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-full"
+                  style={{ background: it.color }}
+                />
+                <span>{it.name || it.dataKey}</span>
+              </div>
+              <div className="font-medium tabular-nums">
+                {valueFormatter ? valueFormatter(it.value, it) : it.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
 
 
 
@@ -1274,32 +1420,50 @@ export default function App() {
     return base;
   }
 
-  // Generic chart (mini or full) with segmented coloring + green band for target
-  function MetricChart({ data, range, height = 180, legend = false }) {
+  function MetricChart({ data, range, height = 180, legend = false, direction = "up" }) {
     const [lo, hi] = range;
-    const seg = makeSegmented(data, lo, hi);
-
     const values = data.map(d => d.value).filter(v => v != null);
-    const max = values.length ? Math.max(100, ...values) : 100;
-    const yMax = Math.ceil((max + 5) / 10) * 10;
+    const hardMin = values.length ? Math.min(...values, lo) : lo;
+    const hardMax = values.length ? Math.max(...values, hi) : hi;
+    const yMin = Math.max(0, Math.floor((hardMin - 5) / 5) * 5);
+    const yMax = Math.ceil((hardMax + 5) / 5) * 5;
+
+    const seg = makeSegmented(data, lo, hi, direction);
 
     return (
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={seg} margin={{ top: 8, right: 12, left: 8, bottom: 0 }}>
+        <LineChart data={seg} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" hide />
-          <YAxis domain={[0, yMax]} />
-          <Tooltip labelFormatter={(l) => `Date: ${l}`} formatter={(v, name) => [v, name === "inRange" ? "In range" : "Out of range"]} />
+          <XAxis
+            dataKey="date"
+            tickMargin={8}
+            minTickGap={24}
+            tickFormatter={(d) => new Date(d + "T00:00:00").toLocaleDateString()}
+          />
+          <YAxis domain={[yMin, yMax]} />
+          <Tooltip
+            content={
+              <SeriesTooltip
+                dark={dark}
+                titleFmt={(l) => `Date: ${l}`}
+                valueFormatter={(val) => String(val)}
+              />
+            }
+          />
           {legend && <Legend />}
-          {/* Soft green band for the target zone */}
-          <ReferenceArea y1={lo} y2={hi} fill="#10b981" fillOpacity={0.12} />
-          {/* Segmented lines */}
-          <Line type="monotone" dataKey="inRange" stroke="#16a34a" strokeWidth={3} dot={false} name="In range" />
-          <Line type="monotone" dataKey="outRange" stroke="#dc2626" strokeWidth={3} dot={false} name="Out of range" />
+
+          {/* Visible green target band */}
+          <ReferenceArea y1={lo} y2={hi} fill="#10b981" fillOpacity={0.18} />
+
+          {/* in range (solid green), good-out (dashed green), bad-out (solid red) */}
+          <Line type="monotone" dataKey="inRange" stroke="#10b981" strokeWidth={3} dot={{ r: 1.8 }} name="In range" />
+          <Line type="monotone" dataKey="goodOut" stroke="#10b981" strokeDasharray="4 3" strokeWidth={3} dot={false} name="Good (out)" />
+          <Line type="monotone" dataKey="badOut" stroke="#ef4444" strokeWidth={3} dot={false} name="Bad (out)" />
         </LineChart>
       </ResponsiveContainer>
     );
   }
+
 
 
 
@@ -1533,14 +1697,19 @@ export default function App() {
                   <YAxis yAxisId="right" orientation="right" domain={[0, yMax]} />
 
                   <Tooltip
-                    formatter={(val, name) => {
-                      const unit =
-                        name.includes("LDL") ? "mg/dL" :
-                          name.includes("Recovery") ? "%" : "ms";
-                      return [`${val} ${unit}`, name];
-                    }}
-                    labelFormatter={(l) => `Date: ${l}`}
+                    content={
+                      <SeriesTooltip
+                        dark={dark}
+                        titleFmt={(l) => `Date: ${l}`}
+                        valueFormatter={(val, item) => {
+                          const name = item.name || item.dataKey || "";
+                          const unit = name.includes("LDL") ? "mg/dL" : name.includes("Recovery") ? "%" : "ms";
+                          return `${val} ${unit}`;
+                        }}
+                      />
+                    }
                   />
+
 
                   <Legend verticalAlign="top" height={28} />
 
@@ -1610,7 +1779,8 @@ export default function App() {
                 {def && series.length > 0 && (
                   <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition duration-200 absolute z-20 left-0 top-full mt-2 w-[320px]">
                     <Card className="shadow-2xl">
-                      <MetricChart data={series} range={[lo, hi]} height={160} />
+                      <MetricChart data={series} range={[lo, hi]} height={160} direction={METRIC_DIRECTION[def.id] || "up"} />
+
                     </Card>
                   </div>
                 )}
@@ -1624,7 +1794,7 @@ export default function App() {
         {/* Progress since joining Elyx */}
         {progress && (
           <Card className="mb-6">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold">Progress since joining Elyx</h2>
               <div className="text-xs text-zinc-500">
                 {fmtDate(progress.since)} → {fmtDate(progress.until)}
@@ -1632,101 +1802,99 @@ export default function App() {
             </div>
 
             <div className="grid lg:grid-cols-12 gap-4 items-stretch">
-              {/* Radar chart */}
-              <div className="lg:col-span-6">
-                <div className="h-64">
+              {/* LEFT: radar fills the column; improved grid/ticks and theme-aware tooltip */}
+              <div className="lg:col-span-6 flex">
+                <div className="flex-1 h-[24rem] sm:h-[26rem] lg:h-[30rem]">
                   <ResponsiveContainer>
-                    <RadarChart data={progress.radar}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="metric" />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                    <RadarChart data={progress.radar} outerRadius="85%">
+                      <PolarGrid stroke={dark ? "rgba(63,63,70,0.5)" : "rgba(228,228,231,0.6)"} />
+                      <PolarAngleAxis
+                        dataKey="metric"
+                        tick={{ fill: dark ? "#d4d4d8" : "#334155", fontSize: 12, letterSpacing: 0.2 }}
+                      />
+                      <PolarRadiusAxis
+                        angle={30}
+                        domain={[0, 100]}
+                        tick={{ fill: dark ? "#a1a1aa" : "#475569", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => `${v}%`}
+                      />
                       <Radar
                         name="Improvement"
                         dataKey="value"
-                        stroke="#0ea5e9"          /* sky-500 */
+                        stroke="#0ea5e9"
                         fill="#0ea5e9"
-                        fillOpacity={0.25}
+                        fillOpacity={0.28}
                       />
-                      <Tooltip formatter={(val) => [`${val}%`, "Improvement"]} />
+                      <Tooltip
+                        {...tooltipStyles}               // <-- uses your memoized light/dark styles
+                        formatter={(val) => [`${val}%`, "Improvement"]}
+                      />
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Right column: overall score + deltas */}
-              <div className="lg:col-span-6 flex flex-col gap-3">
+              {/* RIGHT: ensure content fits; spacing from chart; prevent overflow */}
+              <div className="lg:col-span-6 flex flex-col gap-3 lg:pl-6 min-w-0">
                 <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50 dark:bg-zinc-900/50">
                   <div className="text-sm text-zinc-500">Overall progress score</div>
                   <div className="text-3xl font-bold text-sky-600 dark:text-sky-400">{progress.overall}%</div>
                   <div className="text-xs text-zinc-500 mt-1">Average improvement across six domains</div>
                 </div>
 
+                {/* stat cards — now wrap cleanly without overflow on narrow widths */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {/* HRV */}
-                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
-                    <div className="text-xs text-zinc-500 mb-1">HRV</div>
-                    <div className="text-lg font-semibold text-emerald-600">
-                      {Math.round(progress.dims.HRV.delta ?? 0)} {progress.dims.HRV.unit}
-                    </div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-300">{Math.round(progress.dims.HRV.pct)}% better</div>
-                  </div>
-
-                  {/* Recovery */}
-                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
-                    <div className="text-xs text-zinc-500 mb-1">Recovery</div>
-                    <div className="text-lg font-semibold text-emerald-600">
-                      {Math.round(progress.dims.Recovery.delta ?? 0)} {progress.dims.Recovery.unit}
-                    </div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-300">{Math.round(progress.dims.Recovery.pct)}% better</div>
-                  </div>
-
-                  {/* Sleep (avg deep/REM) */}
-                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
-                    <div className="text-xs text-zinc-500 mb-1">Sleep (avg)</div>
-                    <div className="text-lg font-semibold text-emerald-600">
-                      {Math.round(progress.dims.Sleep.delta ?? 0)} {progress.dims.Sleep.unit}
-                    </div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-300">{Math.round(progress.dims.Sleep.pct)}% better</div>
-                  </div>
-
-                  {/* Activity */}
-                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
-                    <div className="text-xs text-zinc-500 mb-1">Activity</div>
-                    <div className="text-lg font-semibold text-emerald-600">
-                      {Math.round(progress.dims.Activity.delta ?? 0)} {progress.dims.Activity.unit}
-                    </div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-300">{Math.round(progress.dims.Activity.pct)}% better</div>
-                  </div>
-
-                  {/* Lipids (down is good) */}
-                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
-                    <div className="text-xs text-zinc-500 mb-1">Lipids (LDL/ApoB)</div>
-                    <div className="text-lg font-semibold text-emerald-600">
-                      −{Math.abs(Math.round(progress.dims.Lipids.deltaLDL ?? 0))} {progress.dims.Lipids.unit}
-                    </div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-300">
-                      {Math.round(progress.dims.Lipids.pct)}% improvement
-                    </div>
-                    <div className="text-[11px] text-zinc-500 mt-1">
-                      ApoB Δ: −{Math.abs(Math.round(progress.dims.Lipids.deltaApoB ?? 0))}
-                    </div>
-                  </div>
-
-                  {/* Inflammation (hs-CRP, down is good) */}
-                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
-                    <div className="text-xs text-zinc-500 mb-1">Inflammation</div>
-                    <div className="text-lg font-semibold text-emerald-600">
-                      −{Math.abs((progress.dims.Inflammation.delta ?? 0).toFixed(1))} {progress.dims.Inflammation.unit}
-                    </div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-300">
-                      {Math.round(progress.dims.Inflammation.pct)}% improvement
-                    </div>
-                  </div>
+                  <DeltaStatCard
+                    label="HRV"
+                    delta={progress.dims.HRV.delta}
+                    unit={progress.dims.HRV.unit}
+                    pct={progress.dims.HRV.pct}
+                    direction="up"
+                  />
+                  <DeltaStatCard
+                    label="Recovery"
+                    delta={progress.dims.Recovery.delta}
+                    unit={progress.dims.Recovery.unit}
+                    pct={progress.dims.Recovery.pct}
+                    direction="up"
+                  />
+                  <DeltaStatCard
+                    label="Sleep (avg)"
+                    delta={progress.dims.Sleep.delta}
+                    unit={progress.dims.Sleep.unit}
+                    pct={progress.dims.Sleep.pct}
+                    direction="up"
+                  />
+                  <DeltaStatCard
+                    label="Activity"
+                    delta={progress.dims.Activity.delta}
+                    unit={progress.dims.Activity.unit}
+                    pct={progress.dims.Activity.pct}
+                    direction="up"
+                  />
+                  <DeltaStatCard
+                    label="Lipids (LDL/ApoB)"
+                    delta={-Math.abs(progress.dims.Lipids.deltaLDL)}  // show negative when improved (down good)
+                    unit={progress.dims.Lipids.unit}
+                    pct={progress.dims.Lipids.pct}
+                    direction="down"
+                  />
+                  <DeltaStatCard
+                    label="Inflammation (hs-CRP)"
+                    delta={-Math.abs(progress.dims.Inflammation.delta)} // show negative when improved (down good)
+                    unit={progress.dims.Inflammation.unit}
+                    pct={progress.dims.Inflammation.pct}
+                    direction="down"
+                  />
                 </div>
               </div>
             </div>
           </Card>
         )}
+
+
 
 
 
@@ -2099,7 +2267,8 @@ export default function App() {
               <div className="grid md:grid-cols-12 gap-4">
                 {/* Left: big weekly multi-series chart */}
                 <div className="md:col-span-8">
-                  <div className="h-72">
+                  <div className="h-[24rem] md:h-[28rem]">
+
                     <ResponsiveContainer>
                       <LineChart
                         data={internalChartData}
@@ -2119,11 +2288,18 @@ export default function App() {
                         />
                         <YAxis domain={[0, "auto"]} />
                         <Tooltip
-                          labelFormatter={(label) =>
-                            `Week of ${new Date(label + "T00:00:00").toLocaleDateString()}`
+                          content={
+                            <SeriesTooltip
+                              dark={dark}
+                              titleFmt={(label) =>
+                                `Week of ${new Date(label + "T00:00:00").toLocaleDateString()}`
+                              }
+                              valueFormatter={(v) => `${v} h`}
+                            />
                           }
-                          formatter={(v, name) => [`${v} h`, name]}
                         />
+
+
                         <Legend />
 
                         {memberNamesIM.map((name) => (
@@ -2220,10 +2396,6 @@ export default function App() {
           </Card>
         </div>
 
-        <div className="text-xs text-zinc-500 mt-8">
-          Preconfigured Tailwind. Run <code>npm install</code> then <code>npm run dev</code>.
-        </div>
-
         {/* Full-screen metric modal */}
         {metricOpen && (() => {
           const def = byId[metricOpen];
@@ -2242,7 +2414,8 @@ export default function App() {
                     </div>
                     <Button onClick={() => setMetricOpen(null)}>Close</Button>
                   </div>
-                  <MetricChart data={series} range={[lo, hi]} height={420} legend />
+                  <MetricChart data={series} range={[lo, hi]} height={420} legend direction={METRIC_DIRECTION[def.id] || "up"} />
+
                 </Card>
               </div>
             </div>
