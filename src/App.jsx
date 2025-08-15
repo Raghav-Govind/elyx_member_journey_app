@@ -778,12 +778,13 @@ function getDecisionDateISO(d) {
 function trunc(s, n = 24) { return s?.length > n ? s.slice(0, n - 1) + "…" : (s || ""); }
 
 
-function DecisionFlowSVG({ decisions, onSelect, onHover, height = 220, compact = false, fillWidth = false }) {
+function DecisionFlowSVG({ decisions, onSelect, onHover, height = 220, compact = false, fillWidth = false, leftContinuation = false }) {
   const n = decisions.length;
   const padX = 40;
   const gap = 180;
   const width = Math.max(padX * 2 + (n - 1) * gap, 420);
   const cy = Math.round(height * 0.5); // center vertically for both modes
+  const xFirst = padX;
 
 
   return (
@@ -801,6 +802,23 @@ function DecisionFlowSVG({ decisions, onSelect, onHover, height = 220, compact =
           className="text-zinc-200 dark:text-zinc-700"
           strokeWidth="2"
         />
+        {/* left continuation (dotted) — preview only */}
+        {leftContinuation && (
+          <line
+            x1={0}                 // start at the very left edge of the SVG/card content
+            y1={cy}
+            x2={xFirst - 14}       // stop just before the first node
+            y2={cy}
+            stroke="currentColor"
+            className="text-zinc-300 dark:text-zinc-600"
+            strokeWidth="2"
+            strokeDasharray="4 6"
+            strokeLinecap="round"
+            opacity="0.9"
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+
         {/* connectors */}
         {decisions.slice(0, -1).map((d, i) => {
           const x1 = padX + i * gap, x2 = padX + (i + 1) * gap;
@@ -2264,6 +2282,7 @@ export default function App() {
               decisions={decisions.slice(-5)}
               height={200}
               fillWidth
+              leftContinuation={decisions.length > 5}
               onSelect={() => setFlowOpen(true)}
               onHover={(d, x, y) => { setHoverNode(d); setHoverPos({ x, y }); }}
             />
@@ -2698,36 +2717,6 @@ export default function App() {
           </Card>
         </div>
 
-
-
-
-
-
-        <div className="grid md:grid-cols-12 gap-4 mt-6">
-          <Card className="md:col-span-7">
-            <div className="flex items-center gap-2 mb-3"><MessageSquare className="w-5 h-5" /><h2 className="font-semibold">Conversation Viewer</h2></div>
-            <div className="flex gap-2 mb-3">
-              <Input placeholder="Search messages (topic, text, sender)" />
-              <Button><Search className="w-4 h-4" /></Button>
-            </div>
-            <div className="space-y-2 max-h-[28rem] overflow-auto pr-1">
-              {(EMBED.chat || []).map(m => (
-                <div key={m.message_id} className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                  <div className="text-xs text-zinc-500">{fmtDate(m.timestamp)} • {m.sender} • {m.topic}</div>
-                  <div className="text-sm">{m.text}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="md:col-span-5">
-            <div className="flex items-center gap-2 mb-3"><Search className="w-5 h-5" /><h2 className="font-semibold">Ask the Member Assistant</h2></div>
-            <div className="flex gap-2 mb-3">
-              <Input placeholder="e.g., Why I0005? adherence last month, latest diagnostics" />
-            </div>
-            <div className="text-sm text-zinc-500">Use the Decisions panel to explore traceability; the embedded dataset allows offline demo immediately.</div>
-          </Card>
-        </div>
 
         {/* Full-screen metric modal */}
         {metricOpen && (() => {
