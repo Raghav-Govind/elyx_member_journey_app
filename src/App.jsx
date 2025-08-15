@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Legend, ReferenceArea
+  CartesianGrid, Legend, ReferenceArea, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from "recharts";
 
 import { createPortal } from "react-dom";
@@ -62,30 +62,6 @@ function genWearableDaily(startISO, endISO, trips) {
       deep_sleep_min: deep,
       rem_sleep_min: rem,
       steps
-    });
-  }
-  return out;
-}
-
-function genInternalMetrics(startISO, endISO) {
-  const start = new Date(startISO), end = new Date(endISO);
-  const monday = (d) => { const r = new Date(d); const day = (r.getDay() + 6) % 7; r.setDate(r.getDate() - day); r.setHours(0, 0, 0, 0); return r; };
-  const team = [
-    ["Ruby", "Concierge/Orchestrator", [3.5, 5.5]],
-    ["Dr. Warren", "Medical Strategist", [1.5, 2.8]],
-    ["Advik", "Performance Scientist", [1.8, 3.2]],
-    ["Carla", "Nutritionist", [1.2, 2.4]],
-    ["Rachel", "Physiotherapist", [1.0, 2.2]],
-    ["Neel", "Concierge Lead", [1.0, 2.0]],
-  ];
-  const out = [];
-  for (let w = monday(start); w <= end; w.setDate(w.getDate() + 7)) {
-    const week = w.toISOString().slice(0, 10);
-    team.forEach(([name, role, [lo, hi]], idx) => {
-      const t = (w.getTime() / 86400000) + idx * 7; // deterministic
-      const frac = (Math.sin(t) + 1) / 2;
-      const hours = +(lo + (hi - lo) * frac).toFixed(1);
-      out.push({ week_start: week, member_id: "M0001", team_member: name, role, hours });
     });
   }
   return out;
@@ -281,13 +257,87 @@ const EMBED = (() => {
         reason_summary: "Quantify risk and track ApoB/LDL-C/hs-CRP changes after interventions.",
         evidence_message_ids: ["D001", "D002"] // Diagnostic results thread
       }
-    ]
+    ],
+    // Inside EMBED's base object (or assign to base.internal_metrics = [...] after base is declared)
+    internal_metrics: [
+      // Week of 2025-03-03
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.8 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.2 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.6 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.3 },
+
+      // Week of 2025-03-10
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.1 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.5 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.9 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.8 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.5 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.4 },
+
+      // Week of 2025-03-17
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.6 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.1 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.4 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.5 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.2 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.2 },
+
+      // Week of 2025-03-24
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.0 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.7 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.0 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 2.0 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.8 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.6 },
+
+      // Week of 2025-03-31
+      { week_start: "2025-03-31", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.2 },
+      { week_start: "2025-03-31", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 1.9 },
+      { week_start: "2025-03-31", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.0 },
+      { week_start: "2025-03-31", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.3 },
+      { week_start: "2025-03-31", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.1 },
+      { week_start: "2025-03-31", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.0 },
+
+      // Week of 2025-04-07
+      { week_start: "2025-04-07", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.3 },
+      { week_start: "2025-04-07", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.6 },
+      { week_start: "2025-04-07", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.1 },
+      { week_start: "2025-04-07", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 2.2 },
+      { week_start: "2025-04-07", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 2.0 },
+      { week_start: "2025-04-07", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.8 },
+
+      // Week of 2025-04-14
+      { week_start: "2025-04-14", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.7 },
+      { week_start: "2025-04-14", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.3 },
+      { week_start: "2025-04-14", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.7 },
+      { week_start: "2025-04-14", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.9 },
+      { week_start: "2025-04-14", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.6 },
+      { week_start: "2025-04-14", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.5 },
+
+      // Week of 2025-04-21
+      { week_start: "2025-04-21", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.4 },
+      { week_start: "2025-04-21", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 1.8 },
+      { week_start: "2025-04-21", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.1 },
+      { week_start: "2025-04-21", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.4 },
+      { week_start: "2025-04-21", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.2 },
+      { week_start: "2025-04-21", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.1 },
+
+      // Week of 2025-04-28
+      { week_start: "2025-04-28", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.9 },
+      { week_start: "2025-04-28", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.4 },
+      { week_start: "2025-04-28", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.8 },
+      { week_start: "2025-04-28", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.7 },
+      { week_start: "2025-04-28", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.6 },
+      { week_start: "2025-04-28", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.7 }
+    ],
+
 
   };
 
   // 60 days of wearable + weekly internal metrics
   base.wearable_daily = genWearableDaily("2025-03-01", "2025-05-01", base.trips);
-  base.internal_metrics = genInternalMetrics("2025-03-01", "2025-05-01");
   return base;
 })();
 
@@ -978,6 +1028,64 @@ export default function App() {
   }
 
 
+  // ==== Internal Metrics (from EMBED) ====
+  const internal = useMemo(() => bundle.internal_metrics || [], [bundle.internal_metrics]);
+
+  // Unique, sorted weeks and member names
+  const weeksIM = useMemo(
+    () => Array.from(new Set(internal.map(r => r.week_start))).sort(),
+    [internal]
+  );
+  const memberNamesIM = useMemo(
+    () => Array.from(new Set(internal.map(r => r.team_member))),
+    [internal]
+  );
+
+  // Color for a given teammate name (prefer roster color; fallback to ROLE_COLORS by known names)
+  function memberColor(name) {
+    const fromRoster = (roster || []).find(p => p.name === name);
+    if (fromRoster) return fromRoster.color;
+    const fallbackByName = {
+      "Dr. Warren": ROLE_COLORS.Physician,
+      "Rachel": ROLE_COLORS.Physio,
+      "Carla": ROLE_COLORS.Nutrition,
+      "Advik": ROLE_COLORS.Performance,
+      "Ruby": ROLE_COLORS.Concierge,
+      "Neel": ROLE_COLORS.Lead,
+    };
+    return fallbackByName[name] || ROLE_COLORS.Team;
+  }
+
+  // Pivot to recharts-friendly rows: one row per week, columns = each member's hours
+  const internalChartData = useMemo(() => {
+    return weeksIM.map(week => {
+      const row = { week };
+      memberNamesIM.forEach(n => {
+        const rec = internal.find(r => r.week_start === week && r.team_member === n);
+        row[n] = rec ? Number(rec.hours) : null;
+      });
+      return row;
+    });
+  }, [weeksIM, memberNamesIM, internal]);
+
+  // Totals by member (right-hand panel)
+  const totalsByMember = useMemo(() => {
+    return memberNamesIM
+      .map(n => {
+        const all = internal.filter(r => r.team_member === n);
+        const sum = all.reduce((s, r) => s + (Number(r.hours) || 0), 0);
+        const role = all[0]?.role || "";
+        return { name: n, role, hours: +sum.toFixed(1) };
+      })
+      .sort((a, b) => b.hours - a.hours);
+  }, [memberNamesIM, internal]);
+  const maxTotalIM = useMemo(
+    () => Math.max(1, ...totalsByMember.map(t => t.hours)),
+    [totalsByMember]
+  );
+
+
+
 
 
 
@@ -1040,6 +1148,93 @@ export default function App() {
       { label: "hs-CRP", value: latestDx.hsCRP ?? "—" }
     ];
   }, [bundle]);
+
+
+  // --- Progress since joining Elyx (first 14 days vs last 14 days) ---
+  const progress = useMemo(() => {
+    const wear = bundle.wearable_daily || [];
+    if (!wear.length) return null;
+
+    const n = Math.min(14, wear.length);
+    const first = wear.slice(0, n);
+    const last = wear.slice(-n);
+
+    const avg = (arr, sel) =>
+      arr.length ? arr.reduce((s, a) => s + (+sel(a) || 0), 0) / arr.length : null;
+
+    const before = {
+      hrv: avg(first, d => d.HRV_ms),
+      rec: avg(first, d => d.recovery_pct),
+      deep: avg(first, d => d.deep_sleep_min),
+      rem: avg(first, d => d.rem_sleep_min),
+      steps: avg(first, d => d.steps),
+    };
+    const after = {
+      hrv: avg(last, d => d.HRV_ms),
+      rec: avg(last, d => d.recovery_pct),
+      deep: avg(last, d => d.deep_sleep_min),
+      rem: avg(last, d => d.rem_sleep_min),
+      steps: avg(last, d => d.steps),
+    };
+
+    // diagnostics: baseline vs latest
+    const diags = (bundle.diagnostics || []).slice()
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const baseDx = diags[0] || {};
+    const latestDx = diags[diags.length - 1] || {};
+
+    const pctUp = (b, a) => (b == null || a == null || !isFinite(b) || b === 0)
+      ? 0 : Math.max(0, Math.min(100, ((a - b) / Math.abs(b)) * 100));
+
+    const pctDown = (b, a) => (b == null || a == null || !isFinite(b) || b === 0)
+      ? 0 : Math.max(0, Math.min(100, ((b - a) / Math.abs(b)) * 100));
+
+    const dims = {
+      HRV: {
+        pct: pctUp(before.hrv, after.hrv),
+        delta: (after.hrv ?? 0) - (before.hrv ?? 0),
+        unit: "ms", good: "up"
+      },
+      Recovery: {
+        pct: pctUp(before.rec, after.rec),
+        delta: (after.rec ?? 0) - (before.rec ?? 0),
+        unit: "%", good: "up"
+      },
+      Sleep: {
+        pct: (pctUp(before.deep, after.deep) + pctUp(before.rem, after.rem)) / 2,
+        delta: ((after.deep ?? 0) - (before.deep ?? 0) + (after.rem ?? 0) - (before.rem ?? 0)) / 2,
+        unit: "min", good: "up"
+      },
+      Activity: {
+        pct: pctUp(before.steps, after.steps),
+        delta: (after.steps ?? 0) - (before.steps ?? 0),
+        unit: "steps", good: "up"
+      },
+      Lipids: {
+        pct: ((pctDown(baseDx.LDL_C, latestDx.LDL_C) + pctDown(baseDx.ApoB, latestDx.ApoB)) / 2) || 0,
+        deltaLDL: ((baseDx.LDL_C ?? 0) - (latestDx.LDL_C ?? 0)),
+        deltaApoB: ((baseDx.ApoB ?? 0) - (latestDx.ApoB ?? 0)),
+        unit: "mg/dL", good: "down"
+      },
+      Inflammation: {
+        pct: pctDown(baseDx.hsCRP, latestDx.hsCRP),
+        delta: ((baseDx.hsCRP ?? 0) - (latestDx.hsCRP ?? 0)),
+        unit: "mg/L", good: "down"
+      }
+    };
+
+    const radar = Object.entries(dims).map(([metric, v]) => ({
+      metric,
+      value: Math.round(v.pct)
+    }));
+    const overall = Math.round(radar.reduce((s, r) => s + r.value, 0) / radar.length);
+
+    const since = bundle.episodes?.[0]?.start_at || wear[0].date;
+    const until = wear[wear.length - 1].date;
+
+    return { radar, dims, overall, since, until };
+  }, [bundle.wearable_daily, bundle.diagnostics, bundle.episodes]);
+
 
 
 
@@ -1149,10 +1344,8 @@ export default function App() {
     const scrollerRef = React.useRef(null);
     const msgRefs = React.useRef(new Map());
 
-    // track if we've already done the one-time bottom snap this open
-    const didSnapRef = React.useRef(false);
-    // remember if the modal was opened WITH a focus target
-    const focusAtOpenRef = React.useRef(null);
+    // capture whether we opened WITH a focus target (once per open)
+    const initialFocusIdRef = React.useRef(null);
 
     const thread = React.useMemo(() => {
       return (messages || [])
@@ -1163,56 +1356,39 @@ export default function App() {
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     }, [messages, memberId, peer]);
 
-    // Keep a record of the focus target at the instant the modal opens
     React.useEffect(() => {
-      if (open) {
-        // first open in this cycle → capture whatever focusMsgId is at open time
-        if (focusAtOpenRef.current === null) {
-          focusAtOpenRef.current = focusMsgId || null;
-        }
-      } else {
-        // reset between opens
-        focusAtOpenRef.current = null;
-        didSnapRef.current = false;
+      if (open && initialFocusIdRef.current === null) {
+        initialFocusIdRef.current = focusMsgId ?? null;
+      }
+      if (!open) {
+        initialFocusIdRef.current = null;
       }
     }, [open, focusMsgId]);
 
-    // One-time snap-to-bottom ONLY when:
-    // - modal just opened
-    // - we didn't open with a specific focus target
-    React.useEffect(() => {
+    // Auto-scroll to bottom ONLY if opened without a focus target
+    React.useLayoutEffect(() => {
       if (!open) return;
-      if (didSnapRef.current) return;
-      if (focusAtOpenRef.current) return;   // opened with focus → do NOT snap
       const sc = scrollerRef.current;
-      if (sc) {
+      if (!sc) return;
+      if (!initialFocusIdRef.current) {
         sc.scrollTop = sc.scrollHeight;
-        didSnapRef.current = true;
       }
     }, [open]);
 
-    // When a focus target is present, scroll to it and keep the position after highlight ends
+    // Scroll to focused message; after highlight ends, do NOT change scroll
     React.useEffect(() => {
       if (!open || !focusMsgId) return;
       const sc = scrollerRef.current;
       if (!sc) return;
-
       const el = msgRefs.current.get(focusMsgId);
       if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
-
-      // After highlight ends, clear the ring without changing scroll
-      const t = setTimeout(() => {
-        onClearFocus?.();
-        // No snap-to-bottom here; just leave the scroll where it settled
-      }, 1400);
-
+      const t = setTimeout(() => onClearFocus?.(), 1400);
       return () => clearTimeout(t);
     }, [open, focusMsgId, onClearFocus]);
 
     const bubbleTint = peer.color || "#64748b";
-    // In light mode, bump the tint so it’s not washed out; keep it softer in dark mode
-    const bgAlpha = dark ? "22" : "33";  // 0x22 ≈ 13%, 0x33 ≈ 20%
-    const bdAlpha = dark ? "55" : "66";  // border a touch stronger in light
+    const bgAlpha = dark ? "22" : "33";
+    const bdAlpha = dark ? "55" : "66";
 
     return createPortal(
       <div
@@ -1256,7 +1432,7 @@ export default function App() {
                       ${me
                           ? "bg-emerald-600 text-white border-emerald-600"
                           : "text-zinc-900 dark:text-zinc-100"
-                        } ${isFocused ? "ring-2 ring-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.25)]" : ""}`}
+                        } ${isFocused ? "ring-4 ring-sky-500 shadow-[0_0_0_4px_rgba(14,165,233,0.25)]" : ""}`}
                       style={
                         me
                           ? undefined
@@ -1281,6 +1457,7 @@ export default function App() {
       document.body
     );
   }
+
 
 
 
@@ -1441,6 +1618,116 @@ export default function App() {
             );
           })}
         </div>
+
+
+
+        {/* Progress since joining Elyx */}
+        {progress && (
+          <Card className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-semibold">Progress since joining Elyx</h2>
+              <div className="text-xs text-zinc-500">
+                {fmtDate(progress.since)} → {fmtDate(progress.until)}
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-12 gap-4 items-stretch">
+              {/* Radar chart */}
+              <div className="lg:col-span-6">
+                <div className="h-64">
+                  <ResponsiveContainer>
+                    <RadarChart data={progress.radar}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="metric" />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                      <Radar
+                        name="Improvement"
+                        dataKey="value"
+                        stroke="#0ea5e9"          /* sky-500 */
+                        fill="#0ea5e9"
+                        fillOpacity={0.25}
+                      />
+                      <Tooltip formatter={(val) => [`${val}%`, "Improvement"]} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Right column: overall score + deltas */}
+              <div className="lg:col-span-6 flex flex-col gap-3">
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50 dark:bg-zinc-900/50">
+                  <div className="text-sm text-zinc-500">Overall progress score</div>
+                  <div className="text-3xl font-bold text-sky-600 dark:text-sky-400">{progress.overall}%</div>
+                  <div className="text-xs text-zinc-500 mt-1">Average improvement across six domains</div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {/* HRV */}
+                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
+                    <div className="text-xs text-zinc-500 mb-1">HRV</div>
+                    <div className="text-lg font-semibold text-emerald-600">
+                      {Math.round(progress.dims.HRV.delta ?? 0)} {progress.dims.HRV.unit}
+                    </div>
+                    <div className="text-xs text-emerald-700 dark:text-emerald-300">{Math.round(progress.dims.HRV.pct)}% better</div>
+                  </div>
+
+                  {/* Recovery */}
+                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
+                    <div className="text-xs text-zinc-500 mb-1">Recovery</div>
+                    <div className="text-lg font-semibold text-emerald-600">
+                      {Math.round(progress.dims.Recovery.delta ?? 0)} {progress.dims.Recovery.unit}
+                    </div>
+                    <div className="text-xs text-emerald-700 dark:text-emerald-300">{Math.round(progress.dims.Recovery.pct)}% better</div>
+                  </div>
+
+                  {/* Sleep (avg deep/REM) */}
+                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
+                    <div className="text-xs text-zinc-500 mb-1">Sleep (avg)</div>
+                    <div className="text-lg font-semibold text-emerald-600">
+                      {Math.round(progress.dims.Sleep.delta ?? 0)} {progress.dims.Sleep.unit}
+                    </div>
+                    <div className="text-xs text-emerald-700 dark:text-emerald-300">{Math.round(progress.dims.Sleep.pct)}% better</div>
+                  </div>
+
+                  {/* Activity */}
+                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
+                    <div className="text-xs text-zinc-500 mb-1">Activity</div>
+                    <div className="text-lg font-semibold text-emerald-600">
+                      {Math.round(progress.dims.Activity.delta ?? 0)} {progress.dims.Activity.unit}
+                    </div>
+                    <div className="text-xs text-emerald-700 dark:text-emerald-300">{Math.round(progress.dims.Activity.pct)}% better</div>
+                  </div>
+
+                  {/* Lipids (down is good) */}
+                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
+                    <div className="text-xs text-zinc-500 mb-1">Lipids (LDL/ApoB)</div>
+                    <div className="text-lg font-semibold text-emerald-600">
+                      −{Math.abs(Math.round(progress.dims.Lipids.deltaLDL ?? 0))} {progress.dims.Lipids.unit}
+                    </div>
+                    <div className="text-xs text-emerald-700 dark:text-emerald-300">
+                      {Math.round(progress.dims.Lipids.pct)}% improvement
+                    </div>
+                    <div className="text-[11px] text-zinc-500 mt-1">
+                      ApoB Δ: −{Math.abs(Math.round(progress.dims.Lipids.deltaApoB ?? 0))}
+                    </div>
+                  </div>
+
+                  {/* Inflammation (hs-CRP, down is good) */}
+                  <div className="rounded-xl border p-3 bg-white/70 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800">
+                    <div className="text-xs text-zinc-500 mb-1">Inflammation</div>
+                    <div className="text-lg font-semibold text-emerald-600">
+                      −{Math.abs((progress.dims.Inflammation.delta ?? 0).toFixed(1))} {progress.dims.Inflammation.unit}
+                    </div>
+                    <div className="text-xs text-emerald-700 dark:text-emerald-300">
+                      {Math.round(progress.dims.Inflammation.pct)}% improvement
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
 
 
         {/* Hover tooltip for flow nodes (works for preview & modal) */}
@@ -1791,6 +2078,117 @@ export default function App() {
           onClearFocus={() => setFocusMsgId(null)}
           dark={dark}
         />
+
+
+
+        {/* Internal Metrics — Weekly Team Hours */}
+        <div className="mt-6">
+          <Card>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-semibold">Internal Metrics</div>
+              <div className="text-xs text-zinc-500">
+                Weekly time investment by care team
+              </div>
+            </div>
+
+            {internal.length === 0 ? (
+              <div className="text-sm text-zinc-500">
+                No internal metrics embedded. Add <code>internal_metrics</code> to <code>EMBED</code>.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-12 gap-4">
+                {/* Left: big weekly multi-series chart */}
+                <div className="md:col-span-8">
+                  <div className="h-72">
+                    <ResponsiveContainer>
+                      <LineChart
+                        data={internalChartData}
+                        margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="week"
+                          tickMargin={8}
+                          minTickGap={24}
+                          tickFormatter={(d) =>
+                            new Date(d + "T00:00:00").toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                            })
+                          }
+                        />
+                        <YAxis domain={[0, "auto"]} />
+                        <Tooltip
+                          labelFormatter={(label) =>
+                            `Week of ${new Date(label + "T00:00:00").toLocaleDateString()}`
+                          }
+                          formatter={(v, name) => [`${v} h`, name]}
+                        />
+                        <Legend />
+
+                        {memberNamesIM.map((name) => (
+                          <Line
+                            key={name}
+                            type="monotone"
+                            dataKey={name}
+                            name={name}
+                            stroke={memberColor(name)}
+                            strokeWidth={3}
+                            dot={{ r: 3 }}
+                            connectNulls
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Right: totals by team member */}
+                <div className="md:col-span-4">
+                  <div className="text-sm font-medium mb-2">
+                    Total hours by team member
+                  </div>
+                  <div className="space-y-2">
+                    {totalsByMember.map((t) => {
+                      const color = memberColor(t.name);
+                      const widthPct = Math.round((t.hours / maxTotalIM) * 100);
+                      return (
+                        <div
+                          key={t.name}
+                          className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="inline-block w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: color }}
+                              />
+                              <div className="text-sm font-medium">{t.name}</div>
+                              <div className="text-xs text-zinc-500">• {t.role}</div>
+                            </div>
+                            <div className="text-sm font-semibold">
+                              {t.hours.toFixed(1)} h
+                            </div>
+                          </div>
+                          <div className="mt-2 h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${widthPct}%`,
+                                backgroundColor: `${color}55`, // tinted bar
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
 
 
 
