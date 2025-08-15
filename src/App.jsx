@@ -8,18 +8,31 @@ import { createPortal } from "react-dom";
 
 
 import { motion } from "framer-motion";
-import { Sun, Moon, Search, Upload, MessageSquare, Activity, Users, CalendarDays, Info, Filter, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Sun, Moon, Search, Upload, MessageSquare, Activity, Users, CalendarDays, Info, Filter, MapPin, Briefcase, Stethoscope, Plane, User } from "lucide-react";
 
 
 
-const Card = ({ className = "", children, ...props }) => (
-  <div
-    {...props}
-    className={`bg-white/90 dark:bg-zinc-900/90 rounded-2xl shadow-lg border border-zinc-200/60 dark:border-zinc-800/60 p-4 ${className}`}
-  >
-    {children}
-  </div>
-);
+
+// const Card = ({ className = "", children, ...props }) => (
+//   <div
+//     {...props}
+//     className={`bg-white/90 dark:bg-zinc-900/90 rounded-2xl shadow-lg border border-zinc-200/60 dark:border-zinc-800/60 p-4 ${className}`}
+//   >
+//     {children}
+//   </div>
+// );
+
+const Card = ({ className = "", children, variant = "solid", padding = "p-4", ...props }) => {
+  const baseBg = variant === "transparent" ? "bg-transparent dark:bg-transparent" : "bg-white/90 dark:bg-zinc-900/90";
+  return (
+    <div
+      {...props}
+      className={`${baseBg} rounded-2xl shadow-lg border border-zinc-200/60 dark:border-zinc-800/60 ${padding} ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
 
 const Button = ({ className = "", children, ...props }) => (
   <button className={`px-3 py-2 rounded-2xl shadow bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200/60 dark:border-zinc-700/60 transition ${className}`} {...props}>{children}</button>
@@ -27,6 +40,34 @@ const Button = ({ className = "", children, ...props }) => (
 const Input = ({ className = "", ...props }) => (
   <input className={`w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 outline-none focus:ring-2 ring-zinc-300 dark:ring-zinc-700 border border-zinc-200/60 dark:border-zinc-700/60 ${className}`} {...props} />
 );
+
+// --- New: glossy premium badge ---
+const PremiumBadge = ({ className = "" }) => (
+  <span
+    className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium text-white
+    bg-gradient-to-r from-amber-500 via-pink-500 to-violet-500
+    border border-white/20 backdrop-blur-sm ${className}`}
+  >
+    Elyx Premium Member
+  </span>
+);
+
+
+
+// --- New: subtle data-status pill for the top bar ---
+const DataStatus = ({ updatedAt, className = "" }) => (
+  <span
+    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border
+    bg-white/70 dark:bg-zinc-900/70 border-zinc-200/70 dark:border-zinc-800/70
+    text-zinc-700 dark:text-zinc-200 ${className}`}
+    title="Data status"
+  >
+    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+    <span className="text-sm">Synced</span>
+    <span className="text-xs text-zinc-500">• Updated {fmtDate(updatedAt)}</span>
+  </span>
+);
+
 
 // --- Synthetic data generators (deterministic; no uploads needed) ---
 function inRange(d, s, e) { return d >= s && d <= e; }
@@ -367,6 +408,19 @@ const fmtDate = (d) => {
   return dt.toLocaleDateString();
 };
 const formatDate = fmtDate;
+
+const nameInitials = (full = "") =>
+  full.trim().split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase() || "M";
+
+const fmtDateRange = (start, end) => `${fmtDate(start)} → ${fmtDate(end)}`;
+
+const durationDays = (start, end) => {
+  const s = new Date(start), e = new Date(end);
+  if (isNaN(s) || isNaN(e)) return "—";
+  const days = Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
+  return `${days} day${days > 1 ? "s" : ""}`;
+};
+
 
 
 const parseISODateOnly = (s) => new Date(s + "T00:00:00");
@@ -724,7 +778,7 @@ function getDecisionDateISO(d) {
 function trunc(s, n = 24) { return s?.length > n ? s.slice(0, n - 1) + "…" : (s || ""); }
 
 
-function DecisionFlowSVG({ decisions, onSelect, onHover, height = 220, compact = false }) {
+function DecisionFlowSVG({ decisions, onSelect, onHover, height = 220, compact = false, fillWidth = false }) {
   const n = decisions.length;
   const padX = 40;
   const gap = 180;
@@ -733,8 +787,13 @@ function DecisionFlowSVG({ decisions, onSelect, onHover, height = 220, compact =
 
 
   return (
-    <div className="w-full overflow-x-auto">
-      <svg width={width} height={height} className="block">
+    <div className={`w-full ${fillWidth ? "overflow-hidden" : "overflow-x-auto"}`}>
+      <svg
+        {...(fillWidth
+          ? { width: "100%", height, viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: "xMidYMid meet" }
+          : { width, height })}
+        className="block"
+      >
         {/* base line (dark-mode friendly) */}
         <line
           x1={padX} y1={cy} x2={width - padX} y2={cy}
@@ -923,12 +982,25 @@ export default function App() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState([]);
   const [focusMsgId, setFocusMsgId] = useState(null);
+  const [personaOpen, setPersonaOpen] = useState(false);
+
 
 
 
 
 
   const ctx = useMemo(() => ({ ...bundle, chat, rationales }), [bundle, chat, rationales]);
+
+
+  const lastUpdated = useMemo(() => {
+    const w = bundle.wearable_daily || [];
+    const dx = bundle.diagnostics || [];
+    const dates = [];
+    if (w.length) dates.push(new Date(w[w.length - 1].date));
+    if (dx.length) dates.push(new Date(dx[dx.length - 1].date));
+    return dates.length ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
+  }, [bundle.wearable_daily, bundle.diagnostics]);
+
 
 
   // Unified Recharts tooltip styles (dark/light aware)
@@ -1623,6 +1695,157 @@ export default function App() {
   }
 
 
+  function PersonaModal({ open, onClose, member, episodes = [], trips = [] }) {
+    if (!open) return null;
+
+    const initials = nameInitials(member?.preferred_name);
+    const chip = (text) => (
+      <span className="px-2 py-0.5 rounded-full text-[11px] font-medium
+                    text-white border border-white/30 bg-white/15 backdrop-blur">
+        {text}
+      </span>
+    );
+
+    return createPortal(
+      <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+        <div className="max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
+          <Card className="p-0 overflow-hidden">
+            {/* Rounded gradient header (light/dark aware) */}
+            <div className="p-5">
+              <div
+                className="relative h-32 rounded-2xl bg-gradient-to-br
+                         from-sky-400 via-violet-500 to-emerald-400
+                         dark:from-sky-700 dark:via-violet-700 dark:to-emerald-700 shadow-inner"
+              >
+                <button
+                  onClick={onClose}
+                  className="absolute top-3 right-3 px-3 py-1.5 rounded-xl border border-white/40 bg-white/80 dark:bg-zinc-900/80 text-zinc-900 dark:text-zinc-100 hover:bg-white transition"
+                >
+                  Close
+                </button>
+
+                <div className="absolute inset-x-5 bottom-4 flex items-end gap-4">
+                  <div className="w-20 h-20 rounded-2xl bg-white/85 dark:bg-zinc-900/80 border border-white/40 dark:border-zinc-800/80 flex items-center justify-center shadow-md">
+                    <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{initials}</span>
+                  </div>
+                  <div className="pb-1 text-white">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Users className="w-4 h-4 opacity-90" />
+                      <span className="text-xs font-semibold tracking-wide text-white">Member Persona</span>
+                    </div>
+                    <div className="text-2xl font-extrabold drop-shadow-[0_1px_0_rgba(0,0,0,0.25)]">
+                      {member?.preferred_name || "Member"}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {member?.age != null && chip(`${member.age} yrs`)}
+                      {member?.gender && chip(member.gender)}
+                      {member?.primary_residence && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] border border-white/40 bg-white/20 backdrop-blur-sm inline-flex items-center gap-1 text-white">
+                          <MapPin className="w-3.5 h-3.5 opacity-90" />
+                          {member.primary_residence}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 pb-5 grid md:grid-cols-12 gap-5 text-zinc-900 dark:text-zinc-100">
+
+              {/* Left facts */}
+              <div className="md:col-span-5 space-y-3">
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/80 dark:bg-zinc-900/60">
+                  <div className="text-xs text-zinc-500 flex items-center gap-2"><Briefcase className="w-3.5 h-3.5" /> Occupation</div>
+                  <div className="text-sm font-medium mt-1">{member?.occupation || "—"}</div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/80 dark:bg-zinc-900/60">
+                  <div className="text-xs text-zinc-500 flex items-center gap-2"><User className="w-3.5 h-3.5" /> Assistant</div>
+                  <div className="text-sm font-medium mt-1">{member?.assistant || "—"}</div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/80 dark:bg-zinc-900/60">
+                  <div className="text-xs text-zinc-500 flex items-center gap-2"><Stethoscope className="w-3.5 h-3.5" /> Chronic Condition</div>
+                  <div className="text-sm font-medium mt-1">{member?.chronic_condition || "—"}</div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/80 dark:bg-zinc-900/60">
+                  <div className="text-xs text-zinc-500">Wearables</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {(member?.wearables || []).map(w => (
+                      <span key={w} className="px-2 py-0.5 rounded-full text-[11px] border bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800">
+                        {w}
+                      </span>
+                    ))}
+                    {(member?.wearables || []).length === 0 && <span className="text-sm">—</span>}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/80 dark:bg-zinc-900/60">
+                  <div className="text-xs text-zinc-500">Travel hubs</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {(member?.travel_hubs || []).map(h => (
+                      <span key={h} className="px-2 py-0.5 rounded-full text-[11px] border bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800">
+                        {h}
+                      </span>
+                    ))}
+                    {(member?.travel_hubs || []).length === 0 && <span className="text-sm">—</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: episodes & trips */}
+              <div className="md:col-span-7 space-y-4">
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/80 dark:bg-zinc-900/60">
+                  <div className="flex items-center gap-2 mb-2"><CalendarDays className="w-4 h-4" /><div className="font-semibold">Episodes</div></div>
+                  {episodes?.length ? (
+                    <div className="space-y-3 max-h-[18rem] overflow-auto pr-1">
+                      {episodes.map((e) => (
+                        <div key={e.episode_id} className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40">
+                          <div className="text-xs text-zinc-500">{fmtDateRange(e.start_at, e.end_at)} • {durationDays(e.start_at, e.end_at)}</div>
+                          <div className="font-medium mt-0.5">{e.title}</div>
+                          {e.summary && <div className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">{e.summary}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-zinc-500">No episodes.</div>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/80 dark:bg-zinc-900/60">
+                  <div className="flex items-center gap-2 mb-2"><Plane className="w-4 h-4" /><div className="font-semibold">Trips</div></div>
+                  {trips?.length ? (
+                    <div className="space-y-3 max-h-[14rem] overflow-auto pr-1">
+                      {trips.map((t) => (
+                        <div key={t.trip_id} className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 flex items-start gap-3">
+                          <div className="w-2 h-2 rounded-full mt-1.5 bg-sky-500" />
+                          <div className="flex-1">
+                            <div className="font-medium">{t.location}</div>
+                            <div className="text-xs text-zinc-500">{fmtDateRange(t.start_at, t.end_at)} • {durationDays(t.start_at, t.end_at)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-zinc-500">No trips.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+
+
+
+
 
 
 
@@ -1638,46 +1861,145 @@ export default function App() {
     <div className="min-h-screen w-full bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900 text-zinc-900 dark:text-zinc-100">
       <div className="sticky top-0 z-10 backdrop-blur border-b border-zinc-200/60 dark:border-zinc-800/60">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="text-xl font-bold">
+            Elyx Member Journey
+          </motion.div>
           <div className="flex items-center gap-3">
-            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="text-xl font-bold">Elyx Member Journey</motion.div>
-            <Badge>Demo</Badge>
-          </div>
-          <div className="flex gap-2 items-center">
-            <label className="cursor-pointer hidden md:block"><Button><Upload className="w-4 h-4 mr-2" />dataset_summary.json</Button>
-              <input type="file" className="hidden" accept="application/json" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0])} />
-            </label>
-            <label className="cursor-pointer hidden md:block"><Button><Upload className="w-4 h-4 mr-2" />chat_messages.jsonl</Button>
-              <input type="file" className="hidden" accept=".jsonl,text/plain" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], "chat")} />
-            </label>
-            <label className="cursor-pointer hidden md:block"><Button><Upload className="w-4 h-4 mr-2" />rationales.jsonl</Button>
-              <input type="file" className="hidden" accept=".jsonl,text/plain" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], "rationales")} />
-            </label>
-            <Button onClick={() => setDark(d => !d)}>{dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</Button>
+            <DataStatus updatedAt={lastUpdated} />
+            <Button onClick={() => setDark(d => !d)} aria-label="Toggle theme">
+              {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
           </div>
         </div>
+
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold">{bundle.member?.preferred_name || "(upload dataset)"}</h1>
-            <p className="text-zinc-500">Trace decisions, see trends, and ask "why" — with evidence from the chat.</p>
+            <div className="flex items-center gap-2 flex-wrap">
+
+              <h1 className="text-3xl md:text-4xl font-bold">
+                {bundle.member?.preferred_name || "Member"}
+              </h1>
+              <PremiumBadge />
+            </div>
+            <p className="text-zinc-500 mt-1">
+              Trace decisions, see trends, and ask "why" — with evidence from the chat.
+            </p>
           </div>
+
         </div>
 
         <div className="grid md:grid-cols-12 gap-4 mb-6">
-          <Card className="md:col-span-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Users className="w-5 h-5" />
-              <h2 className="font-semibold">Member Snapshot</h2>
-            </div>
-            <div className="text-sm space-y-1">
-              <div><span className="text-zinc-500">Residence:</span> {bundle.member?.primary_residence || "—"}</div>
-              <div><span className="text-zinc-500">Chronic:</span> {bundle.member?.chronic_condition || "—"}</div>
-              <div><span className="text-zinc-500">Wearables:</span> {(bundle.member?.wearables || []).join(", ")}</div>
-              <div><span className="text-zinc-500">Travel hubs:</span> {(bundle.member?.travel_hubs || []).join(" • ")}</div>
+          <Card
+            variant="transparent"
+            padding="p-0"
+            className="md:col-span-4 relative overflow-hidden hover:shadow-xl transition cursor-pointer"
+            role="button"
+            tabIndex={0}
+            title="Open member persona"
+            onClick={() => setPersonaOpen(true)}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setPersonaOpen(true)}
+          >
+            {/* FULL-CARD gradient (light/dark variants) */}
+            <div
+              className="absolute inset-0 z-0 bg-gradient-to-br
+               from-sky-400 via-violet-500 to-emerald-400
+               dark:from-sky-700 dark:via-violet-700 dark:to-emerald-700"
+            />
+
+            {/* Content on top of gradient (glass tiles) */}
+            <div className="relative z-0 p-4 sm:p-5">
+
+              <div className="flex items-end gap-3">
+                {/* Avatar tile */}
+                <div className="w-16 h-16 rounded-2xl bg-white/85 dark:bg-zinc-900/80 border border-white/40 dark:border-zinc-800/70 flex items-center justify-center shadow">
+                  <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                    {nameInitials(bundle.member?.preferred_name)}
+                  </span>
+                </div>
+
+                {/* Heading */}
+                <div className="flex-1 pb-1">
+                  <div className="flex items-center gap-2 justify-start text-white mb-3 dark:text-white mb-3 -ml-[4.75rem]">
+                    <Users className="w-4 h-4 opacity-90" />
+                    <h2 className="font-semibold">Member Snapshot</h2>
+                  </div>
+                  <div className="text-lg font-extrabold text-white mt-0.5 drop-shadow-[0_1px_0_rgba(0,0,0,0.25)]">
+                    {bundle.member?.preferred_name || "(upload dataset)"}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {bundle.member?.age != null && (
+                      <span className="px-2 py-0.5 rounded-full text-[11px] border border-white/40 bg-white/20 backdrop-blur-sm text-white">
+                        {bundle.member.age} yrs
+                      </span>
+                    )}
+                    {bundle.member?.gender && (
+                      <span className="px-2 py-0.5 rounded-full text-[11px] border border-white/40 bg-white/20 backdrop-blur-sm text-white">
+                        {bundle.member.gender}
+                      </span>
+                    )}
+                    {bundle.member?.primary_residence && (
+                      <span className="px-2 py-0.5 rounded-full text-[11px] border border-white/40 bg-white/20 backdrop-blur-sm text-white inline-flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 opacity-90" />
+                        {bundle.member.primary_residence}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick facts */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                <div className="rounded-xl border border-white/40 bg-white/25 dark:bg-zinc-900/30 backdrop-blur-sm p-3 text-white">
+                  <div className="text-xs text-white/80 flex items-center gap-2">
+                    <Briefcase className="w-3.5 h-3.5" /> Occupation
+                  </div>
+                  <div className="text-sm font-medium mt-1">{bundle.member?.occupation || "—"}</div>
+                </div>
+                <div className="rounded-xl border border-white/40 bg-white/25 dark:bg-zinc-900/30 backdrop-blur-sm p-3 text-white">
+                  <div className="text-xs text-white/80 flex items-center gap-2">
+                    <Stethoscope className="w-3.5 h-3.5" /> Chronic Condition
+                  </div>
+                  <div className="text-sm font-medium mt-1">{bundle.member?.chronic_condition || "—"}</div>
+                </div>
+                <div className="rounded-xl border border-white/40 bg-white/25 dark:bg-zinc-900/30 backdrop-blur-sm p-3 text-white">
+                  <div className="text-xs text-white/80 flex items-center gap-2">
+                    <User className="w-3.5 h-3.5" /> Assistant
+                  </div>
+                  <div className="text-sm font-medium mt-1">{bundle.member?.assistant || "—"}</div>
+                </div>
+                <div className="rounded-xl border border-white/40 bg-white/25 dark:bg-zinc-900/30 backdrop-blur-sm p-3 text-white">
+                  <div className="text-xs text-white/80">Wearables</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {(bundle.member?.wearables || []).map(w => (
+                      <span key={w} className="px-2 py-0.5 rounded-full text-[11px] border border-white/40 bg-white/20 text-white">
+                        {w}
+                      </span>
+                    ))}
+                    {(bundle.member?.wearables || []).length === 0 && <span className="text-sm">—</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Travel hubs */}
+              <div className="mt-3">
+                <div className="text-xs text-white/80">Travel hubs</div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {(bundle.member?.travel_hubs || []).map(h => (
+                    <span key={h} className="px-2 py-0.5 rounded-full text-[11px] border border-white/40 bg-white/20 text-white">
+                      {h}
+                    </span>
+                  ))}
+                  {(bundle.member?.travel_hubs || []).length === 0 && <span className="text-sm text-white">—</span>}
+                </div>
+              </div>
             </div>
           </Card>
+
+
+
           <Card className="md:col-span-8">
             <div className="flex items-center gap-3 mb-3">
               <Activity className="w-5 h-5" />
@@ -1941,6 +2263,7 @@ export default function App() {
             <DecisionFlowSVG
               decisions={decisions.slice(-5)}
               height={200}
+              fillWidth
               onSelect={() => setFlowOpen(true)}
               onHover={(d, x, y) => { setHoverNode(d); setHoverPos({ x, y }); }}
             />
@@ -2246,6 +2569,16 @@ export default function App() {
           onClearFocus={() => setFocusMsgId(null)}
           dark={dark}
         />
+
+        <PersonaModal
+          open={personaOpen}
+          onClose={() => setPersonaOpen(false)}
+          member={bundle.member}
+          episodes={bundle.episodes}
+          trips={bundle.trips}
+        />
+
+
 
 
 
