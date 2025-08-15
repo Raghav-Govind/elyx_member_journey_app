@@ -289,8 +289,16 @@ const EMBED = (() => {
 })();
 
 
-const fmtDate = (d) => { try { return new Date(d).toLocaleDateString(); } catch { return d; } };
+const fmtDate = (d) => {
+  if (!d) return "—";
+  // If we were passed a preformatted label, just return it
+  if (typeof d === "string" && /\b[a-z]{3,}/i.test(d) && !/^\d{4}-\d{2}-\d{2}/.test(d)) return d;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return typeof d === "string" ? d : "—";
+  return dt.toLocaleDateString();
+};
 const formatDate = fmtDate;
+
 
 const parseISODateOnly = (s) => new Date(s + "T00:00:00");
 
@@ -770,6 +778,7 @@ export default function App() {
   const [decisionsQuery, setDecisionsQuery] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState([]);
+  const [focusMsgId, setFocusMsgId] = useState(null);
 
 
 
@@ -807,6 +816,28 @@ export default function App() {
     () => Array.from(new Set(roster.map(r => titleCase(r.role)))),
     [roster]
   );
+
+
+  // Use the merged decisions object for selection so we have dateLabel, type, owner, etc.
+  const selId = useMemo(
+    () => (selDecision?.id || "").toUpperCase(),
+    [selDecision]
+  );
+
+  // IMPORTANT: read rationales/evidence from EMBED (as you asked)
+  const selRationale = useMemo(() => {
+    return (EMBED.rationales || []).find(
+      r => (r.decision_id || "").toUpperCase() === selId
+    );
+  }, [selId]);
+
+  const evidenceMsgs = useMemo(() => {
+    const ids = selRationale?.evidence_message_ids || [];
+    const all = EMBED.chat || [];
+    return ids.map(mid => all.find(m => m.message_id === mid)).filter(Boolean);
+  }, [selRationale]);
+
+
 
 
 
@@ -1089,15 +1120,6 @@ export default function App() {
 
   const ask = () => { setQa(answerQuestion(query, ctx)); };
 
-  const evidenceMsgs = useMemo(() => {
-    if (!selDecision) return [];
-    const id = (selDecision.intervention_id || selDecision.diagnostic_id || "").toLowerCase();
-    const r = rationales.find(x => (x.decision_id || "").toLowerCase() === id);
-    if (!r) return [];
-    const byId = new Map(chat.map(m => [m.message_id, m]));
-    return (r.evidence_message_ids || []).map(id => byId.get(id)).filter(Boolean);
-  }, [selDecision, rationales, chat]);
-
   function RoleDot({ color = "#6366f1" }) {
     return <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />;
   }
@@ -1116,50 +1138,68 @@ export default function App() {
     );
   }
 
-  function ChatModal({ open, onClose, peer, member, messages }) {
-    if (!open || !peer) return null;
-    const memberId = member?.member_id || "M0001";
-    const thread = (messages || [])
-      .filter(m =>
-        (m.sender_id === memberId && m.receiver_id === peer.id) ||
-        (m.receiver_id === memberId && m.sender_id === peer.id)
-      )
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  function ChatModal({ open, onClose, peer, member, messages, focusMessageId }) {
+    const containerRef = React.useRef(null);
 
-    const peerBubbleStyle = { backgroundColor: roleColor(peer.role) };
+    if (!open || !peer) return null;
+
+    const memberId = member?.member_id || "M0001";
+    const thread = useMemo(() => {
+      return (messages || [])
+        .filter(m =>
+          (m.sender_id === memberId && m.receiver_id === peer.id) ||
+          (m.receiver_id === memberId && m.sender_id === peer.id)
+        )
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    }, [messages, memberId, peer]);
+
+    // After mount/update, scroll to the focused msg (if any) and highlight briefly
+    useEffect(() => {
+      if (!open || !focusMessageId) return;
+      const el = containerRef.current?.querySelector(`[data-mid="${focusMessageId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-amber-400");
+        const t = setTimeout(() => el.classList.remove("ring-2", "ring-amber-400"), 1800);
+        return () => clearTimeout(t);
+      }
+    }, [open, focusMessageId, thread]);
 
     return (
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
         <div className="max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
-          <Card>
+          <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="font-semibold">
-                Chat with {peer.name}
-                <span className="ml-2 text-xs px-2 py-0.5 rounded-full border"
-                  style={{ borderColor: roleColor(peer.role), color: roleColor(peer.role) }}>
-                  {titleCase(peer.role)}
-                </span>
-              </div>
+              <div className="font-semibold">Chat with {peer.name}</div>
               <Button onClick={onClose}>Close</Button>
             </div>
 
-            <div className="h-[60vh] overflow-auto rounded-xl p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+            <div
+              ref={containerRef}
+              className="h-[60vh] overflow-auto rounded-xl p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+            >
               {thread.length === 0 && <div className="text-sm text-zinc-500">No messages in this thread.</div>}
 
               {thread.map(m => {
                 const me = m.sender_id === memberId;
                 return (
-                  <div key={m.message_id} className={`flex ${me ? "justify-end" : "justify-start"} mb-2`}>
+                  <div key={m.message_id} className={`flex ${me ? "justify-end" : "justify-start"} mb-2`} data-mid={m.message_id}>
                     <div
-                      className={`max-w-[75%] rounded-2xl px-3 py-2 shadow text-sm leading-snug
-                                ${me ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100" : "text-white"}`}
-                      style={me ? {} : peerBubbleStyle}
+                      className={`max-w-[75%] rounded-2xl px-3 py-2 shadow border ${me
+                        ? "bg-emerald-600 text-white border-emerald-700"
+                        : "text-zinc-900 dark:text-zinc-100"
+                        }`}
+                      style={
+                        me
+                          ? undefined
+                          : { backgroundColor: `${peer.color}1a`, borderColor: peer.color }
+                      }
                     >
-                      <div className={`text-[11px] opacity-80 mb-1 ${me ? "text-zinc-600 dark:text-zinc-400" : "text-white"}`}>
+                      <div className="text-xs opacity-70 mb-1" style={!me ? { color: peer.color } : undefined}>
                         {me ? member?.preferred_name : peer.name}
                       </div>
-                      <div>{m.text}</div>
-                      <div className={`text-[10px] mt-1 opacity-75 ${me ? "text-zinc-600 dark:text-zinc-400" : "text-white"}`}>
+                      <div className="text-sm leading-snug">{m.text}</div>
+                      <div className={`text-[10px] mt-1 opacity-70 ${me ? "text-white" : "text-zinc-600"}`}>
                         {new Date(m.timestamp).toLocaleString()}
                       </div>
                     </div>
@@ -1172,6 +1212,7 @@ export default function App() {
       </div>
     );
   }
+
 
 
 
@@ -1386,7 +1427,7 @@ export default function App() {
 
 
         <div className="grid md:grid-cols-12 gap-4">
-          {/* LEFT: Decisions list with search + owner filter */}
+          {/* LEFT: Decisions list with search + owner filter (always visible) */}
           <Card className="md:col-span-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -1418,7 +1459,6 @@ export default function App() {
                       onClick={() => toggleOwner(opt.name)}
                       className="px-2.5 py-1 rounded-full border text-xs transition"
                       style={{
-                        // same size in both states; only color changes
                         borderColor: active ? opt.color : "rgba(113,113,122,0.35)",
                         backgroundColor: active ? `${opt.color}1a` : "transparent",
                         color: active ? opt.color : "inherit"
@@ -1445,21 +1485,24 @@ export default function App() {
               </div>
             </div>
 
-            {/* list */}
+            {/* list (sorted by date) */}
             <div className="space-y-2 max-h-[28rem] overflow-auto pr-1">
-              {filteredDecisions.map(d => (
-                <div
-                  key={d.id}
-                  className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition"
-                  onClick={() => setSelDecision(d)} // NOTE: set the unified decision object
-                >
-                  <div className="flex items-center justify-between text-sm text-zinc-500">
-                    <div>{d.type} • {d.dateLabel}</div>
-                    <OwnerBadge owner={d.owner} type={d.type} />
+              {filteredDecisions
+                .slice()
+                .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
+                .map(d => (
+                  <div
+                    key={d.id}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition"
+                    onClick={() => setSelDecision(d)} // select the unified decision object
+                  >
+                    <div className="flex items-center justify-between text-sm text-zinc-500">
+                      <div>{d.type} • {d.dateLabel}</div>
+                      <OwnerBadge owner={d.owner} type={d.type} />
+                    </div>
+                    <div className="font-medium mt-1">{d.label}</div>
                   </div>
-                  <div className="font-medium mt-1">{d.label}</div>
-                </div>
-              ))}
+                ))}
 
               {filteredDecisions.length === 0 && (
                 <div className="text-sm text-zinc-500 p-3 rounded-xl border border-dashed">
@@ -1469,7 +1512,7 @@ export default function App() {
             </div>
           </Card>
 
-          {/* RIGHT: Evidence with owner badge */}
+          {/* RIGHT: Evidence with owner badge, rationale + outcomes + chat evidence */}
           <Card className="md:col-span-7">
             <div className="flex items-center gap-2 mb-3">
               <Info className="w-5 h-5" />
@@ -1480,139 +1523,148 @@ export default function App() {
               <div className="text-zinc-500 text-sm">
                 Select a decision to view its rationale, outcomes, and chat evidence.
               </div>
-            ) : (() => {
-              // Works for both interventions and diagnostics
-              const isIV = !!selDecision.intervention_id;
-              const id = (selDecision.intervention_id || selDecision.diagnostic_id || "").toUpperCase();
-              const type = isIV ? selDecision.type : "Diagnostic";
-              const dateLabel = isIV ? fmtDate(selDecision.start_at) : fmtDate(selDecision.date);
-              const title = isIV ? (selDecision.title || `${type} plan`) : (selDecision.Notes || "Diagnostic panel");
-
-              // If missing, pick a sensible default for owner based on type
-              const owner = selDecision.owner || (
-                type === "Nutrition" ? "Carla (Nutritionist)" :
-                  type === "Medication" ? "Dr. Warren (Physician)" :
-                    type === "Exercise" ? "Rachel (Physiotherapist)" :
-                      "Dr. Warren (Physician)"
-              );
-
-              // Fallback expected/actual for diagnostics
-              const expected = selDecision.expected || (type === "Diagnostic" ? {
-                note: "Quantify risk markers",
-                metrics: { ApoB: {}, LDL_C: {}, hsCRP: {} }
-              } : null);
-
-              const actual = selDecision.actual || (type === "Diagnostic" ? {
-                note: `ApoB ${selDecision.ApoB ?? "—"}, LDL-C ${selDecision.LDL_C ?? "—"}, hsCRP ${selDecision.hsCRP ?? "—"}`
-              } : null);
-
-              // Rationale + evidence from CURRENT STATE
-              const rationale = rationales.find(r => (r.decision_id || "").toUpperCase() === id);
-              const evidenceMsgs = (rationale?.evidence_message_ids || [])
-                .map(mid => chat.find(m => m.message_id === mid))
-                .filter(Boolean);
-
-              return (
-                <div className="space-y-4">
-                  {/* Header */}
-                  <div>
-                    <div className="text-lg font-semibold">{title}</div>
-                    <div className="text-sm text-zinc-500">{type} • {dateLabel}</div>
-                    <div className="mt-1">
-                      <OwnerBadge owner={owner} type={type} />
-                    </div>
-                  </div>
-
-                  {/* Expected vs Actual */}
-                  {(expected || actual) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {/* Expected */}
-                      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm font-medium">Expected outcome</div>
-                          <OutcomeBadge status="na" />
-                        </div>
-                        <div className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">{expected?.note || "—"}</div>
-                        {expected?.metrics && (
-                          <div className="mt-2 grid grid-cols-1 gap-2">
-                            {Object.entries(expected.metrics).map(([metricKey, v]) => (
-                              <div key={metricKey} className="flex items-center justify-between text-sm">
-                                <div className="text-zinc-500">{metricKey}</div>
-                                <div className="font-medium">
-                                  {v.delta || "—"} {v.window ? <span className="text-xs text-zinc-500">({v.window})</span> : null}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Actual (scored) */}
-                      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-900">
-                        <div className="text-sm font-medium mb-1">Actual outcome</div>
-                        <div className="text-sm text-zinc-600 dark:text-zinc-300">{actual?.note || "—"}</div>
-
-                        {expected?.metrics && actual?.metrics && (
-                          <div className="mt-3 grid grid-cols-1 gap-2">
-                            {Object.entries(expected.metrics).map(([metricKey, exp]) => {
-                              const act = actual.metrics[metricKey] || {};
-                              const { status } = scoreOutcome(metricKey, exp, act);
-                              const cardMap = {
-                                met: "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300",
-                                partial: "bg-amber-50  dark:bg-amber-900/30  border-amber-300",
-                                missed: "bg-rose-50    dark:bg-rose-900/30    border-rose-300",
-                                na: "bg-zinc-50    dark:bg-zinc-900/40    border-zinc-300",
-                              };
-                              return (
-                                <div key={metricKey} className={`rounded-lg border p-3 ${cardMap[status]}`}>
-                                  <div className="flex items-center justify-between">
-                                    <div className="font-medium">{metricKey}</div>
-                                    <OutcomeBadge status={status} />
-                                  </div>
-                                  <div className="text-xs mt-1 text-zinc-600 dark:text-zinc-300">
-                                    Expected: {exp.delta || "—"}{exp.window ? ` (${exp.window})` : ""} ·{" "}
-                                    Actual: {act.before != null ? `${act.before} → ` : ""}{act.after ?? "—"}
-                                    {act.delta != null ? ` (${act.delta > 0 ? "+" : ""}${act.delta})` : ""}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Rationale */}
-                  <div>
-                    <div className="text-sm font-medium mb-1">Rationale</div>
-                    <div className="text-sm">{rationale?.reason_summary || "No rationale found for this decision."}</div>
-                  </div>
-
-                  {/* Evidence (chat) */}
-                  <div>
-                    <div className="text-sm font-medium mb-1">Evidence (chat)</div>
-                    {evidenceMsgs.length ? (
-                      <div className="space-y-2 max-h-64 overflow-auto pr-1">
-                        {evidenceMsgs.map(m => (
-                          <div key={m.message_id} className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                            <div className="text-xs text-zinc-500">
-                              {new Date(m.timestamp).toLocaleString()} • {m.sender} → {m.receiver} • {m.topic}
-                            </div>
-                            <div className="text-sm">{m.text}</div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-zinc-500">No linked messages.</div>
-                    )}
+            ) : (
+              <div className="space-y-4">
+                {/* Header */}
+                <div>
+                  <div className="text-lg font-semibold">{selDecision.label}</div>
+                  {/* SAME date as in list */}
+                  <div className="text-sm text-zinc-500">{selDecision.type} • {selDecision.dateLabel}</div>
+                  <div className="mt-1">
+                    <OwnerBadge owner={selDecision.owner} type={selDecision.type} />
                   </div>
                 </div>
-              );
-            })()}
-          </Card>
 
+                {/* Expected vs Actual (reuse your scoring UI) */}
+                {(selDecision.expected || selDecision.actual) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Expected */}
+                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium">Expected outcome</div>
+                        <OutcomeBadge status="na" />
+                      </div>
+                      <div className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">
+                        {selDecision.expected?.note || "—"}
+                      </div>
+                      {selDecision.expected?.metrics && (
+                        <div className="mt-2 grid grid-cols-1 gap-2">
+                          {Object.entries(selDecision.expected.metrics).map(([metricKey, v]) => (
+                            <div key={metricKey} className="flex items-center justify-between text-sm">
+                              <div className="text-zinc-500">{metricKey}</div>
+                              <div className="font-medium">
+                                {v.delta || "—"}{" "}
+                                {v.window ? <span className="text-xs text-zinc-500">({v.window})</span> : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actual (scored) */}
+                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-900">
+                      <div className="text-sm font-medium mb-1">Actual outcome</div>
+                      <div className="text-sm text-zinc-600 dark:text-zinc-300">
+                        {selDecision.actual?.note || "—"}
+                      </div>
+
+                      {selDecision.expected?.metrics && selDecision.actual?.metrics && (
+                        <div className="mt-3 grid grid-cols-1 gap-2">
+                          {Object.entries(selDecision.expected.metrics).map(([metricKey, exp]) => {
+                            const act = selDecision.actual.metrics[metricKey] || {};
+                            const { status } = scoreOutcome(metricKey, exp, act);
+                            const cardMap = {
+                              met: "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300",
+                              partial: "bg-amber-50  dark:bg-amber-900/30  border-amber-300",
+                              missed: "bg-rose-50    dark:bg-rose-900/30    border-rose-300",
+                              na: "bg-zinc-50    dark:bg-zinc-900/40    border-zinc-300",
+                            };
+                            return (
+                              <div key={metricKey} className={`rounded-lg border p-3 ${cardMap[status]}`}>
+                                <div className="flex items-center justify-between">
+                                  <div className="font-medium">{metricKey}</div>
+                                  <OutcomeBadge status={status} />
+                                </div>
+                                <div className="text-xs mt-1 text-zinc-600 dark:text-zinc-300">
+                                  Expected: {exp.delta || "—"}{exp.window ? ` (${exp.window})` : ""} ·{" "}
+                                  Actual: {act.before != null ? `${act.before} → ` : ""}{act.after ?? "—"}
+                                  {act.delta != null ? ` (${act.delta > 0 ? "+" : ""}${act.delta})` : ""}
+                                  {act.window ? ` — ${act.window}` : ""}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rationale (from EMBED via useMemo selRationale) */}
+                <div>
+                  <div className="text-sm font-medium mb-1">Rationale</div>
+                  <div className="text-sm">
+                    {selRationale?.reason_summary || "No rationale found for this decision."}
+                  </div>
+                </div>
+
+                {/* Evidence (chat) — from EMBED via useMemo evidenceMsgs */}
+                <div>
+                  <div className="font-medium mb-1">Evidence (from chat)</div>
+
+                  {evidenceMsgs.length ? (
+                    <div className="space-y-2 max-h-60 overflow-auto pr-1">
+                      {evidenceMsgs.map(m => {
+                        // figure out who the non-member peer is for this message
+                        const memberId = bundle.member?.member_id || "M0001";
+                        const nonMemberId = m.sender_id === memberId ? m.receiver_id : m.sender_id;
+
+                        // try to find the peer in roster; if missing, build a fallback
+                        const peerForMsg =
+                          (roster || []).find(r => r.id === nonMemberId) ||
+                          (() => {
+                            const isSenderPeer = m.sender_id !== memberId;
+                            const name = isSenderPeer ? m.sender : m.receiver;
+                            const role = (isSenderPeer ? m.sender_role : m.receiver_role) || "Team";
+                            const color = ROLE_COLORS[role] || ROLE_COLORS.Team;
+                            return { id: nonMemberId, name, role, color };
+                          })();
+
+                        return (
+                          <button
+                            key={m.message_id}
+                            onClick={() => {
+                              setPeer(peerForMsg);
+                              setChatOpen(true);
+                              // let the modal mount, then set focus for smooth scroll/highlight
+                              setTimeout(() => setFocusMsgId && setFocusMsgId(m.message_id), 0);
+                            }}
+                            className="w-full text-left"
+                            title={`Open chat with ${peerForMsg.name}`}
+                          >
+                            <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition border border-zinc-200 dark:border-zinc-700">
+                              <div className="flex items-center justify-between">
+                                <div className="text-xs text-zinc-500">
+                                  {new Date(m.timestamp).toLocaleString()} • {m.sender} → {m.receiver} • {m.topic}
+                                </div>
+                                <OwnerBadge owner={selDecision.owner} type={selDecision.type} />
+                              </div>
+                              <div className="text-sm mt-1">{m.text}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-zinc-500">No linked messages.</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
         </div>
+
 
 
 
@@ -1656,11 +1708,13 @@ export default function App() {
         {/* Chat modal */}
         <ChatModal
           open={chatOpen}
-          onClose={() => setChatOpen(false)}
+          onClose={() => { setChatOpen(false); setFocusMsgId(null); }}
           peer={peer}
           member={bundle.member}
           messages={chat}
+          focusMessageId={focusMsgId}
         />
+
 
 
 
