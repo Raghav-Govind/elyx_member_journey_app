@@ -195,6 +195,25 @@ const EMBED = (() => {
       { "message_id": "W008", "timestamp": "2025-03-24T09:20:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Warren", "receiver": "Dr. Warren", "receiver_role": "physician", "topic": "Losartan trial", "text": "Noted." },
       { "message_id": "W009", "timestamp": "2025-03-24T09:26:00+08:00", "sender_id": "U_Warren", "sender": "Dr. Warren", "sender_role": "physician", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Losartan trial", "text": "If standing SBP <100 consistently, message me." },
       { "message_id": "W010", "timestamp": "2025-03-24T09:30:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Warren", "receiver": "Dr. Warren", "receiver_role": "physician", "topic": "Losartan trial", "text": "Will do." },
+      // Diagnostics (D01) ↔ Rohan
+      {
+        message_id: "D001",
+        timestamp: "2025-04-15T10:00:00+08:00",
+        sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician",
+        receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member",
+        topic: "Diagnostics results",
+        text: "Panel shows LDL-C 118 (down from 132), ApoB 99, hsCRP 1.8."
+      },
+      {
+        message_id: "D002",
+        timestamp: "2025-04-15T10:04:00+08:00",
+        sender_id: "M0001", sender: "Rohan Patel", sender_role: "member",
+        receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician",
+        topic: "Diagnostics results",
+        text: "Great — that’s reassuring. Let’s keep the nutrition plan."
+      },
+
+
 
       // Advik ↔ Rohan (Performance)
       { "message_id": "A001", "timestamp": "2025-04-09T20:05:00+08:00", "sender_id": "U_Advik", "sender": "Advik", "sender_role": "performance", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Travel‑proof Z2", "text": "We’ll structure Z2 around flights; mobility on low‑recovery days." },
@@ -237,29 +256,30 @@ const EMBED = (() => {
       {
         decision_type: "Exercise", decision_id: "I0001", date: "2025-01-30", member_id: "M0001",
         reason_summary: "Improve autonomic tone and mobility foundations; address posture/breathing.",
-        evidence_message_ids: ["M1001", "M1002"]
+        evidence_message_ids: ["R001", "R002"] // Rachel ↔ Rohan
       },
       {
         decision_type: "Nutrition", decision_id: "I0002", date: "2025-02-01", member_id: "M0001",
         reason_summary: "Lower LDL-C and support sleep (caffeine cutoff) to aid recovery.",
-        evidence_message_ids: ["M1101", "M1102", "M1401"]
+        evidence_message_ids: ["C001", "C002"] // Carla ↔ Rohan
       },
       {
         decision_type: "Medication", decision_id: "I0005", date: "2025-03-20", member_id: "M0001",
         reason_summary: "Short ARB trial to improve orthostatic symptoms and recovery.",
-        evidence_message_ids: ["M1201", "M1202"]
+        evidence_message_ids: ["W001", "W002"] // Dr. Warren ↔ Rohan
       },
       {
         decision_type: "Exercise", decision_id: "I0008", date: "2025-04-10", member_id: "M0001",
         reason_summary: "Maintain HRV during travel; reduce dips via mobility add-ons.",
-        evidence_message_ids: ["M1301", "M1302"]
+        evidence_message_ids: ["A001", "A002"] // Advik ↔ Rohan
       },
       {
         decision_type: "Diagnostic", decision_id: "D01", date: "2025-04-15", member_id: "M0001",
         reason_summary: "Quantify risk and track ApoB/LDL-C/hs-CRP changes after interventions.",
-        evidence_message_ids: ["M1401"]
+        evidence_message_ids: ["D001", "D002"] // Diagnostic results thread
       }
     ]
+
   };
 
   // 60 days of wearable + weekly internal metrics
@@ -1458,48 +1478,140 @@ export default function App() {
 
             {!selDecision ? (
               <div className="text-zinc-500 text-sm">
-                Select a decision to view its rationale and linked evidence messages.
+                Select a decision to view its rationale, outcomes, and chat evidence.
               </div>
-            ) : (
-              <div className="space-y-3">
-                {/* title + owner badge */}
-                <div className="flex items-start justify-between gap-3">
+            ) : (() => {
+              // Works for both interventions and diagnostics
+              const isIV = !!selDecision.intervention_id;
+              const id = (selDecision.intervention_id || selDecision.diagnostic_id || "").toUpperCase();
+              const type = isIV ? selDecision.type : "Diagnostic";
+              const dateLabel = isIV ? fmtDate(selDecision.start_at) : fmtDate(selDecision.date);
+              const title = isIV ? (selDecision.title || `${type} plan`) : (selDecision.Notes || "Diagnostic panel");
+
+              // If missing, pick a sensible default for owner based on type
+              const owner = selDecision.owner || (
+                type === "Nutrition" ? "Carla (Nutritionist)" :
+                  type === "Medication" ? "Dr. Warren (Physician)" :
+                    type === "Exercise" ? "Rachel (Physiotherapist)" :
+                      "Dr. Warren (Physician)"
+              );
+
+              // Fallback expected/actual for diagnostics
+              const expected = selDecision.expected || (type === "Diagnostic" ? {
+                note: "Quantify risk markers",
+                metrics: { ApoB: {}, LDL_C: {}, hsCRP: {} }
+              } : null);
+
+              const actual = selDecision.actual || (type === "Diagnostic" ? {
+                note: `ApoB ${selDecision.ApoB ?? "—"}, LDL-C ${selDecision.LDL_C ?? "—"}, hsCRP ${selDecision.hsCRP ?? "—"}`
+              } : null);
+
+              // Rationale + evidence from CURRENT STATE
+              const rationale = rationales.find(r => (r.decision_id || "").toUpperCase() === id);
+              const evidenceMsgs = (rationale?.evidence_message_ids || [])
+                .map(mid => chat.find(m => m.message_id === mid))
+                .filter(Boolean);
+
+              return (
+                <div className="space-y-4">
+                  {/* Header */}
                   <div>
-                    <div className="text-lg font-semibold">{selDecision.label}</div>
-                    <div className="text-sm text-zinc-500">
-                      {selDecision.type} • {selDecision.dateLabel}
+                    <div className="text-lg font-semibold">{title}</div>
+                    <div className="text-sm text-zinc-500">{type} • {dateLabel}</div>
+                    <div className="mt-1">
+                      <OwnerBadge owner={owner} type={type} />
                     </div>
                   </div>
-                  <OwnerBadge owner={selDecision.owner} type={selDecision.type} />
-                </div>
 
-                {/* rationale */}
-                <div className="text-sm">
-                  {(rationales.find(r => (r.decision_id || "").toLowerCase() === (selDecision.id || "").toLowerCase())?.reason_summary)
-                    || "Rationale not loaded."}
-                </div>
-
-                {/* evidence */}
-                <div>
-                  <div className="font-medium mb-1">Evidence (from chat)</div>
-                  <div className="space-y-2 max-h-60 overflow-auto pr-1">
-                    {(rationales.find(r => (r.decision_id || "").toLowerCase() === (selDecision.id || "").toLowerCase())?.evidence_message_ids || [])
-                      .map(id => {
-                        const msg = (chat || []).find(m => m.message_id === id);
-                        return msg ? (
-                          <div key={id} className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                            <div className="text-xs text-zinc-500">
-                              {new Date(msg.timestamp).toLocaleString()} • {msg.sender}
-                            </div>
-                            <div className="text-sm">{msg.text}</div>
+                  {/* Expected vs Actual */}
+                  {(expected || actual) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Expected */}
+                      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium">Expected outcome</div>
+                          <OutcomeBadge status="na" />
+                        </div>
+                        <div className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">{expected?.note || "—"}</div>
+                        {expected?.metrics && (
+                          <div className="mt-2 grid grid-cols-1 gap-2">
+                            {Object.entries(expected.metrics).map(([metricKey, v]) => (
+                              <div key={metricKey} className="flex items-center justify-between text-sm">
+                                <div className="text-zinc-500">{metricKey}</div>
+                                <div className="font-medium">
+                                  {v.delta || "—"} {v.window ? <span className="text-xs text-zinc-500">({v.window})</span> : null}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ) : null;
-                      })}
+                        )}
+                      </div>
+
+                      {/* Actual (scored) */}
+                      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-900">
+                        <div className="text-sm font-medium mb-1">Actual outcome</div>
+                        <div className="text-sm text-zinc-600 dark:text-zinc-300">{actual?.note || "—"}</div>
+
+                        {expected?.metrics && actual?.metrics && (
+                          <div className="mt-3 grid grid-cols-1 gap-2">
+                            {Object.entries(expected.metrics).map(([metricKey, exp]) => {
+                              const act = actual.metrics[metricKey] || {};
+                              const { status } = scoreOutcome(metricKey, exp, act);
+                              const cardMap = {
+                                met: "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300",
+                                partial: "bg-amber-50  dark:bg-amber-900/30  border-amber-300",
+                                missed: "bg-rose-50    dark:bg-rose-900/30    border-rose-300",
+                                na: "bg-zinc-50    dark:bg-zinc-900/40    border-zinc-300",
+                              };
+                              return (
+                                <div key={metricKey} className={`rounded-lg border p-3 ${cardMap[status]}`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="font-medium">{metricKey}</div>
+                                    <OutcomeBadge status={status} />
+                                  </div>
+                                  <div className="text-xs mt-1 text-zinc-600 dark:text-zinc-300">
+                                    Expected: {exp.delta || "—"}{exp.window ? ` (${exp.window})` : ""} ·{" "}
+                                    Actual: {act.before != null ? `${act.before} → ` : ""}{act.after ?? "—"}
+                                    {act.delta != null ? ` (${act.delta > 0 ? "+" : ""}${act.delta})` : ""}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rationale */}
+                  <div>
+                    <div className="text-sm font-medium mb-1">Rationale</div>
+                    <div className="text-sm">{rationale?.reason_summary || "No rationale found for this decision."}</div>
+                  </div>
+
+                  {/* Evidence (chat) */}
+                  <div>
+                    <div className="text-sm font-medium mb-1">Evidence (chat)</div>
+                    {evidenceMsgs.length ? (
+                      <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                        {evidenceMsgs.map(m => (
+                          <div key={m.message_id} className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800">
+                            <div className="text-xs text-zinc-500">
+                              {new Date(m.timestamp).toLocaleString()} • {m.sender} → {m.receiver} • {m.topic}
+                            </div>
+                            <div className="text-sm">{m.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-zinc-500">No linked messages.</div>
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </Card>
+
         </div>
 
 
@@ -1742,5 +1854,3 @@ export default function App() {
     </div>
   );
 }
-
-//ggs
