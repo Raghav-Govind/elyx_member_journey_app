@@ -1,8 +1,11 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Legend, ReferenceArea
 } from "recharts";
+
+import { createPortal } from "react-dom";
+
 
 import { motion } from "framer-motion";
 import { Sun, Moon, Search, Upload, MessageSquare, Activity, Users, CalendarDays, Info, Filter } from "lucide-react";
@@ -783,6 +786,7 @@ export default function App() {
 
 
 
+
   const ctx = useMemo(() => ({ ...bundle, chat, rationales }), [bundle, chat, rationales]);
 
 
@@ -1138,13 +1142,19 @@ export default function App() {
     );
   }
 
-  function ChatModal({ open, onClose, peer, member, messages, focusMessageId }) {
-    const containerRef = React.useRef(null);
-
+  function ChatModal({ open, onClose, peer, member, messages, focusMsgId, onClearFocus, dark }) {
     if (!open || !peer) return null;
 
     const memberId = member?.member_id || "M0001";
-    const thread = useMemo(() => {
+    const scrollerRef = React.useRef(null);
+    const msgRefs = React.useRef(new Map());
+
+    // track if we've already done the one-time bottom snap this open
+    const didSnapRef = React.useRef(false);
+    // remember if the modal was opened WITH a focus target
+    const focusAtOpenRef = React.useRef(null);
+
+    const thread = React.useMemo(() => {
       return (messages || [])
         .filter(m =>
           (m.sender_id === memberId && m.receiver_id === peer.id) ||
@@ -1153,53 +1163,111 @@ export default function App() {
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     }, [messages, memberId, peer]);
 
-    // After mount/update, scroll to the focused msg (if any) and highlight briefly
-    useEffect(() => {
-      if (!open || !focusMessageId) return;
-      const el = containerRef.current?.querySelector(`[data-mid="${focusMessageId}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.classList.add("ring-2", "ring-amber-400");
-        const t = setTimeout(() => el.classList.remove("ring-2", "ring-amber-400"), 1800);
-        return () => clearTimeout(t);
+    // Keep a record of the focus target at the instant the modal opens
+    React.useEffect(() => {
+      if (open) {
+        // first open in this cycle → capture whatever focusMsgId is at open time
+        if (focusAtOpenRef.current === null) {
+          focusAtOpenRef.current = focusMsgId || null;
+        }
+      } else {
+        // reset between opens
+        focusAtOpenRef.current = null;
+        didSnapRef.current = false;
       }
-    }, [open, focusMessageId, thread]);
+    }, [open, focusMsgId]);
 
-    return (
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    // One-time snap-to-bottom ONLY when:
+    // - modal just opened
+    // - we didn't open with a specific focus target
+    React.useEffect(() => {
+      if (!open) return;
+      if (didSnapRef.current) return;
+      if (focusAtOpenRef.current) return;   // opened with focus → do NOT snap
+      const sc = scrollerRef.current;
+      if (sc) {
+        sc.scrollTop = sc.scrollHeight;
+        didSnapRef.current = true;
+      }
+    }, [open]);
+
+    // When a focus target is present, scroll to it and keep the position after highlight ends
+    React.useEffect(() => {
+      if (!open || !focusMsgId) return;
+      const sc = scrollerRef.current;
+      if (!sc) return;
+
+      const el = msgRefs.current.get(focusMsgId);
+      if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+
+      // After highlight ends, clear the ring without changing scroll
+      const t = setTimeout(() => {
+        onClearFocus?.();
+        // No snap-to-bottom here; just leave the scroll where it settled
+      }, 1400);
+
+      return () => clearTimeout(t);
+    }, [open, focusMsgId, onClearFocus]);
+
+    const bubbleTint = peer.color || "#64748b";
+    // In light mode, bump the tint so it’s not washed out; keep it softer in dark mode
+    const bgAlpha = dark ? "22" : "33";  // 0x22 ≈ 13%, 0x33 ≈ 20%
+    const bdAlpha = dark ? "55" : "66";  // border a touch stronger in light
+
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+        onClick={onClose}
+      >
         <div className="max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="font-semibold">Chat with {peer.name}</div>
-              <Button onClick={onClose}>Close</Button>
+              <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                Chat with {peer.name}
+              </div>
+              <button
+                onClick={onClose}
+                className="px-3 py-1.5 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+              >
+                Close
+              </button>
             </div>
 
             <div
-              ref={containerRef}
+              ref={scrollerRef}
               className="h-[60vh] overflow-auto rounded-xl p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
             >
-              {thread.length === 0 && <div className="text-sm text-zinc-500">No messages in this thread.</div>}
+              {thread.length === 0 && (
+                <div className="text-sm text-zinc-500">No messages in this thread.</div>
+              )}
 
               {thread.map(m => {
                 const me = m.sender_id === memberId;
+                const isFocused = focusMsgId === m.message_id;
+
                 return (
-                  <div key={m.message_id} className={`flex ${me ? "justify-end" : "justify-start"} mb-2`} data-mid={m.message_id}>
+                  <div key={m.message_id} className={`flex ${me ? "justify-end" : "justify-start"} mb-2`}>
                     <div
-                      className={`max-w-[75%] rounded-2xl px-3 py-2 shadow border ${me
-                        ? "bg-emerald-600 text-white border-emerald-700"
-                        : "text-zinc-900 dark:text-zinc-100"
-                        }`}
+                      ref={el => {
+                        if (el) msgRefs.current.set(m.message_id, el);
+                        else msgRefs.current.delete(m.message_id);
+                      }}
+                      className={`max-w-[75%] rounded-2xl px-3 py-2 shadow border relative
+                      ${me
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "text-zinc-900 dark:text-zinc-100"
+                        } ${isFocused ? "ring-2 ring-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.25)]" : ""}`}
                       style={
                         me
                           ? undefined
-                          : { backgroundColor: `${peer.color}1a`, borderColor: peer.color }
+                          : { backgroundColor: `${bubbleTint}${bgAlpha}`, borderColor: `${bubbleTint}${bdAlpha}` }
                       }
                     >
-                      <div className="text-xs opacity-70 mb-1" style={!me ? { color: peer.color } : undefined}>
-                        {me ? member?.preferred_name : peer.name}
+                      <div className={`text-xs opacity-70 mb-1 ${me ? "text-white" : "text-zinc-600 dark:text-zinc-300"}`}>
+                        {m.sender}
                       </div>
                       <div className="text-sm leading-snug">{m.text}</div>
-                      <div className={`text-[10px] mt-1 opacity-70 ${me ? "text-white" : "text-zinc-600"}`}>
+                      <div className={`text-[10px] mt-1 opacity-70 ${me ? "text-white" : "text-zinc-500"}`}>
                         {new Date(m.timestamp).toLocaleString()}
                       </div>
                     </div>
@@ -1209,9 +1277,14 @@ export default function App() {
             </div>
           </Card>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
+
+
+
+
 
 
 
@@ -1614,13 +1687,11 @@ export default function App() {
                   <div className="font-medium mb-1">Evidence (from chat)</div>
 
                   {evidenceMsgs.length ? (
-                    <div className="space-y-2 max-h-60 overflow-auto pr-1">
+                    <div className="space-y-2 max-h-64 overflow-auto pr-1">
                       {evidenceMsgs.map(m => {
-                        // figure out who the non-member peer is for this message
                         const memberId = bundle.member?.member_id || "M0001";
                         const nonMemberId = m.sender_id === memberId ? m.receiver_id : m.sender_id;
 
-                        // try to find the peer in roster; if missing, build a fallback
                         const peerForMsg =
                           (roster || []).find(r => r.id === nonMemberId) ||
                           (() => {
@@ -1631,14 +1702,17 @@ export default function App() {
                             return { id: nonMemberId, name, role, color };
                           })();
 
+                        // same badge inputs as the Decisions panel
+                        const ownerForBadge = selDecision.owner || (selDecision.type === "Diagnostic" ? "Dr. Warren (Physician)" : "");
+                        const typeForBadge = selDecision.type || "Diagnostic";
+
                         return (
                           <button
                             key={m.message_id}
                             onClick={() => {
                               setPeer(peerForMsg);
                               setChatOpen(true);
-                              // let the modal mount, then set focus for smooth scroll/highlight
-                              setTimeout(() => setFocusMsgId && setFocusMsgId(m.message_id), 0);
+                              setFocusMsgId(m.message_id);
                             }}
                             className="w-full text-left"
                             title={`Open chat with ${peerForMsg.name}`}
@@ -1648,7 +1722,7 @@ export default function App() {
                                 <div className="text-xs text-zinc-500">
                                   {new Date(m.timestamp).toLocaleString()} • {m.sender} → {m.receiver} • {m.topic}
                                 </div>
-                                <OwnerBadge owner={selDecision.owner} type={selDecision.type} />
+                                <OwnerBadge owner={ownerForBadge} type={typeForBadge} />
                               </div>
                               <div className="text-sm mt-1">{m.text}</div>
                             </div>
@@ -1659,6 +1733,7 @@ export default function App() {
                   ) : (
                     <div className="text-sm text-zinc-500">No linked messages.</div>
                   )}
+
                 </div>
               </div>
             )}
@@ -1708,12 +1783,15 @@ export default function App() {
         {/* Chat modal */}
         <ChatModal
           open={chatOpen}
-          onClose={() => { setChatOpen(false); setFocusMsgId(null); }}
+          onClose={() => setChatOpen(false)}
           peer={peer}
           member={bundle.member}
           messages={chat}
-          focusMessageId={focusMsgId}
+          focusMsgId={focusMsgId}
+          onClearFocus={() => setFocusMsgId(null)}
+          dark={dark}
         />
+
 
 
 
@@ -1802,100 +1880,162 @@ export default function App() {
                   <div className="text-sm text-zinc-500">No decisions to show.</div>
                 )}
 
-                {/* Selected decision details */}
-                {flowSel && (
-                  <div className="mt-4 grid md:grid-cols-12 gap-4">
-                    {/* Left: headline + owner + Expected/Actual summary cards */}
-                    <Card className="md:col-span-5">
-                      <div className="text-sm text-zinc-500 mb-1">{flowSel.type} • {flowSel.dateLabel}</div>
-                      <div className="text-lg font-semibold">{flowSel.label}</div>
-                      {flowSel.owner && <div className="text-sm mt-1">Owner: {flowSel.owner}</div>}
+                {/* Selected decision details (FLOW) */}
+                {flowSel && (() => {
+                  const id = (flowSel.id || "").toUpperCase();
+                  const type = flowSel.type || "Diagnostic";
+                  const dateLabel = flowSel.dateLabel || "—"; // uses the same label as the list
+                  const title = flowSel.label || `${type} plan`;
 
-                      {/* Expected vs Actual (highlighted / larger) */}
-                      <div className="mt-4 grid grid-cols-1 gap-3">
-                        {/* Expected */}
-                        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium">Expected outcome</div>
-                            <OutcomeBadge status={Object.keys(flowSel.expected?.metrics || {}).length ? "na" : "na"} />
+                  // keep the same owner/expected/actual logic you use elsewhere
+                  const owner = flowSel.owner || (
+                    type === "Nutrition" ? "Carla (Nutritionist)" :
+                      type === "Medication" ? "Dr. Warren (Physician)" :
+                        type === "Exercise" ? "Rachel (Physiotherapist)" :
+                          "Dr. Warren (Physician)"
+                  );
+
+                  const expected = flowSel.expected || (type === "Diagnostic" ? {
+                    note: "Quantify risk markers",
+                    metrics: { ApoB: {}, LDL_C: {}, hsCRP: {} }
+                  } : null);
+
+                  const actual = flowSel.actual || (type === "Diagnostic" ? {
+                    note: `ApoB ${flowSel.ApoB ?? "—"}, LDL-C ${flowSel.LDL_C ?? "—"}, hsCRP ${flowSel.hsCRP ?? "—"}`
+                  } : null);
+
+                  // Rationale + evidence directly from EMBED/state
+                  const rationale = rationales.find(r => (r.decision_id || "").toUpperCase() === id);
+                  const evidenceMsgs = (rationale?.evidence_message_ids || [])
+                    .map(mid => chat.find(m => m.message_id === mid))
+                    .filter(Boolean);
+
+                  return (
+                    <div className="mt-4 grid md:grid-cols-12 gap-4">
+                      {/* Left: header + owner + outcomes (same UI) */}
+                      <Card className="md:col-span-5">
+                        <div className="text-sm text-zinc-500 mb-1">{type} • {dateLabel}</div>
+                        <div className="text-lg font-semibold">{title}</div>
+                        <div className="mt-1">
+                          <OwnerBadge owner={owner} type={type} />
+                        </div>
+
+                        {(expected || actual) && (
+                          <div className="mt-4 grid grid-cols-1 gap-3">
+                            {/* Expected */}
+                            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm font-medium">Expected outcome</div>
+                                <OutcomeBadge status="na" />
+                              </div>
+                              <div className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">{expected?.note || "—"}</div>
+                              {expected?.metrics && (
+                                <div className="mt-2 grid grid-cols-1 gap-2">
+                                  {Object.entries(expected.metrics).map(([metricKey, v]) => (
+                                    <div key={metricKey} className="flex items-center justify-between text-sm">
+                                      <div className="text-zinc-500">{metricKey}</div>
+                                      <div className="font-medium">
+                                        {v.delta || "—"} {v.window ? <span className="text-xs text-zinc-500">({v.window})</span> : null}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actual (with status) */}
+                            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-900">
+                              <div className="text-sm font-medium mb-1">Actual outcome</div>
+                              <div className="text-sm text-zinc-600 dark:text-zinc-300">{actual?.note || "—"}</div>
+
+                              {expected?.metrics && actual?.metrics && (
+                                <div className="mt-3 grid grid-cols-1 gap-2">
+                                  {Object.entries(expected.metrics).map(([metricKey, exp]) => {
+                                    const act = actual.metrics[metricKey] || {};
+                                    const { status } = scoreOutcome(metricKey, exp, act);
+                                    const cardMap = {
+                                      met: "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300",
+                                      partial: "bg-amber-50 dark:bg-amber-900/30 border-amber-300",
+                                      missed: "bg-rose-50 dark:bg-rose-900/30 border-rose-300",
+                                      na: "bg-zinc-50 dark:bg-zinc-900/40 border-zinc-300",
+                                    };
+                                    return (
+                                      <div key={metricKey} className={`rounded-lg border p-3 ${cardMap[status]}`}>
+                                        <div className="flex items-center justify-between">
+                                          <div className="font-medium">{metricKey}</div>
+                                          <OutcomeBadge status={status} />
+                                        </div>
+                                        <div className="text-xs mt-1 text-zinc-600 dark:text-zinc-300">
+                                          Expected: {exp.delta || "—"}{exp.window ? ` (${exp.window})` : ""} ·{" "}
+                                          Actual: {act.before != null ? `${act.before} → ` : ""}{act.after ?? "—"}
+                                          {act.delta != null ? ` (${act.delta > 0 ? "+" : ""}${act.delta})` : ""}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">{flowSel.expected?.note || "—"}</div>
-                          {flowSel.expected?.metrics && (
-                            <div className="mt-2 grid grid-cols-1 gap-2">
-                              {Object.entries(flowSel.expected.metrics).map(([metricKey, v]) => (
-                                <div key={metricKey} className="flex items-center justify-between text-sm">
-                                  <div className="text-zinc-500">{metricKey}</div>
-                                  <div className="font-medium">{v.delta || "—"} {v.window ? <span className="text-xs text-zinc-500">({v.window})</span> : null}</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        )}
+                      </Card>
 
-                        {/* Actual with scoring per metric */}
-                        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-900">
-                          <div className="text-sm font-medium mb-1">Actual outcome</div>
-                          <div className="text-sm text-zinc-600 dark:text-zinc-300">{flowSel.actual?.note || "—"}</div>
+                      {/* Right: Rationale + Evidence (click → open same ChatModal and highlight) */}
+                      <Card className="md:col-span-7">
+                        <div className="text-sm font-medium mb-2">Why this decision?</div>
+                        {rationale?.reason_summary ? (
+                          <div className="text-sm">{rationale.reason_summary}</div>
+                        ) : (
+                          <div className="text-sm text-zinc-500">No rationale found for this decision.</div>
+                        )}
 
-                          {/* Metric-by-metric colored cards */}
-                          {flowSel.expected?.metrics && flowSel.actual?.metrics && (
-                            <div className="mt-3 grid grid-cols-1 gap-2">
-                              {Object.entries(flowSel.expected.metrics).map(([metricKey, exp]) => {
-                                const act = flowSel.actual.metrics[metricKey] || {};
-                                const { status } = scoreOutcome(metricKey, exp, act);
+                        <div className="text-sm font-medium mt-3 mb-1">Evidence (chat)</div>
+                        {evidenceMsgs.length ? (
+                          <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                            {evidenceMsgs.map(m => {
+                              // find the non-member peer for this message
+                              const memberId = bundle.member?.member_id || "M0001";
+                              const nonMemberId = m.sender_id === memberId ? m.receiver_id : m.sender_id;
 
-                                const cardMap = {
-                                  met: "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300",
-                                  partial: "bg-amber-50  dark:bg-amber-900/30  border-amber-300",
-                                  missed: "bg-rose-50    dark:bg-rose-900/30    border-rose-300",
-                                  na: "bg-zinc-50    dark:bg-zinc-900/40    border-zinc-300",
-                                };
+                              const peerForMsg =
+                                (roster || []).find(r => r.id === nonMemberId) ||
+                                (() => {
+                                  const isSenderPeer = m.sender_id !== memberId;
+                                  const name = isSenderPeer ? m.sender : m.receiver;
+                                  const role = (isSenderPeer ? m.sender_role : m.receiver_role) || "Team";
+                                  const color = ROLE_COLORS[role] || ROLE_COLORS.Team;
+                                  return { id: nonMemberId, name, role, color };
+                                })();
 
-                                return (
-                                  <div key={metricKey} className={`rounded-lg border p-3 ${cardMap[status]}`}>
-                                    <div className="flex items-center justify-between">
-                                      <div className="font-medium">{metricKey}</div>
-                                      <OutcomeBadge status={status} />
+                              return (
+                                <button
+                                  key={m.message_id}
+                                  onClick={() => {
+                                    setPeer(peerForMsg);
+                                    setChatOpen(true);
+                                    setFocusMsgId(m.message_id);  // <-- same ChatModal, same focus behavior
+                                  }}
+                                  className="w-full text-left"
+                                  title={`Open chat with ${peerForMsg.name}`}
+                                >
+                                  <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition border border-zinc-200 dark:border-zinc-700">
+                                    <div className="text-xs text-zinc-500">
+                                      {new Date(m.timestamp).toLocaleString()} • {m.sender} → {m.receiver} • {m.topic}
                                     </div>
-                                    <div className="text-xs mt-1 text-zinc-600 dark:text-zinc-300">
-                                      Expected: {exp.delta || "—"}{exp.window ? ` (${exp.window})` : ""} ·{" "}
-                                      Actual: {act.before != null ? `${act.before} → ` : ""}{act.after ?? "—"}{act.delta != null ? ` (${act.delta > 0 ? "+" : ""}${act.delta})` : ""}
-                                    </div>
+                                    <div className="text-sm mt-1">{m.text}</div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-zinc-500">No linked messages.</div>
+                        )}
+                      </Card>
+                    </div>
+                  );
+                })()}
 
-                    {/* Right: rationale + chat evidence */}
-                    <Card className="md:col-span-7">
-                      <div className="text-sm font-medium mb-2">Why this decision?</div>
-                      {flowDetail?.rationale ? (
-                        <>
-                          <div className="text-sm">{flowDetail.rationale.reason_summary}</div>
-                          <div className="text-sm font-medium mt-3">Evidence (chat)</div>
-                          {flowDetail.evidence?.length ? (
-                            <div className="space-y-2 max-h-64 overflow-auto pr-1 mt-1">
-                              {flowDetail.evidence.map(m => (
-                                <div key={m.message_id} className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                                  <div className="text-xs text-zinc-500">{new Date(m.timestamp).toLocaleString()} • {m.sender}</div>
-                                  <div className="text-sm">{m.text}</div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-sm text-zinc-500">No linked messages.</div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-sm text-zinc-500">No rationale loaded.</div>
-                      )}
-                    </Card>
-                  </div>
-                )}
 
               </Card>
             </div>
