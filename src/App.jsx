@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 
 
 import { motion } from "framer-motion";
-import { Sun, Moon, Search, Upload, MessageSquare, Activity, Users, CalendarDays, Info, Filter, MapPin, Briefcase, Stethoscope, Plane, User } from "lucide-react";
+import { Sun, Moon, Search, Upload, MessageSquare, Activity, Users, CalendarDays, Info, Filter, MapPin, Briefcase, Stethoscope, Plane, User, Send, Loader2 } from "lucide-react";
 
 
 
@@ -975,6 +975,551 @@ function normalizeChat(arr, member) {
 
 
 
+function ChatBot({
+  embed,
+  dark,
+  onOpenFlow,        // (id?: string) => void
+  onOpenPersona,     // () => void
+  onOpenMetric,      // (metricId: string) => void
+}) {
+  // ---------- UI state ----------
+  const [msgs, setMsgs] = React.useState([
+    {
+      role: "assistant",
+      kind: "text",
+      content:
+        "Hi! Ask me in plain English about this member’s data. Try: “open flow preview”, “HRV last 14 days”, “open LDL metric”, or “ApoB last month”."
+    }
+  ]);
+  const [input, setInput] = React.useState("");
+  const [sending, setSending] = React.useState(false);
+
+  // ---------- auto-scroll + auto-grow ----------
+  const scrollRef = React.useRef(null);
+  const firstPaint = React.useRef(true);
+
+  React.useEffect(() => {
+    const sc = scrollRef.current;
+    if (!sc) return;
+    sc.scrollTo({
+      top: sc.scrollHeight,
+      behavior: firstPaint.current ? "auto" : "smooth",
+    });
+    firstPaint.current = false;
+  }, [msgs, sending]);
+
+  // Base 28rem, grow ~2rem per 4 messages up to +12rem
+  const containerHeightRem = React.useMemo(() => {
+    const extra = Math.min(12, Math.floor(msgs.length / 4) * 2);
+    return 28 + extra;
+  }, [msgs.length]);
+
+  // ---------- local NLP resources ----------
+  const STOP = new Set(("a an and the is are was were be been being to for in on at by with of from about as into over after before during while through between against without within near than then if else when whenever where wherever who whom whose which that this these those i you he she it we they me him her us them my your his her its our their mine yours hers ours theirs do does did done doing have has had having will would can could should may might must not no nor").split(/\s+/));
+
+  const METRIC_NAME_TO_ID = {
+    "hrv": "HRV_ms",
+    "recovery": "recovery_pct",
+    "deep": "deep_sleep_min", "deep sleep": "deep_sleep_min",
+    "rem": "rem_sleep_min", "rem sleep": "rem_sleep_min",
+    "steps": "steps",
+    "ldl": "LDL_C", "ldl-c": "LDL_C",
+    "apob": "ApoB",
+    "hdl": "HDL_C",
+    "hscrp": "hsCRP", "hs-crp": "hsCRP"
+  };
+
+  const synonyms = [
+    [/^open\s+hrv(?:\s+metric|\s+card)?$/i, "OPEN_METRIC_ID:HRV_ms"],
+    [/^open\s+recovery(?:\s+metric|\s+card)?$/i, "OPEN_METRIC_ID:recovery_pct"],
+    [/^open\s+ldl(?:-c)?(?:\s+metric|\s+card)?$/i, "OPEN_METRIC_ID:LDL_C"],
+    [/open (?:the )?(?:flow|decision flow|flow preview)/i, "OPEN_FLOW"],
+    [/open (?:the )?(?:persona|member persona|snapshot)/i, "OPEN_PERSONA"],
+    [/open ([a-z- ]+)(?: metric| card)?/i, "OPEN_METRIC:$1"],
+    [/(?:show|plot|graph).*(ldl).*(hrv).*correl/i, "CORR_LDL_HRV"],
+    [/(?:show|plot|graph).*(hrv).*(ldl).*correl/i, "CORR_LDL_HRV"],
+    [/why.*\b(i\d{3,4}|d\d{2,3})\b/i, "RATIONALE:$1"],
+    [/(?:latest|recent).*(diagnostic|panel|lipids)/i, "LATEST_DIAG"],
+  ];
+
+  function tokens(s) {
+    return s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(/\s+/)
+      .filter(t => t && !STOP.has(t));
+  }
+
+  // ---------- light semantic search (TF-IDF) over chat/notes ----------
+  const searchIndex = React.useMemo(() => {
+    const docs = [];
+
+    // chat
+    (embed.chat || []).forEach((m, i) => {
+      docs.push({
+        id: `msg:${m.message_id || i}`,
+        type: "msg",
+        text: `${m.sender}: ${m.text} (${m.topic || ""})`.trim(),
+        payload: m
+      });
+    });
+
+    // interventions
+    (embed.interventions || []).forEach(iv => {
+      docs.push({
+        id: `iv:${iv.intervention_id}`,
+        type: "intervention",
+        text: `${iv.title || ""} ${iv.owner || ""} ${iv.type || ""} ${iv.expected?.note || ""} ${iv.actual?.note || ""}`.trim(),
+        payload: iv
+      });
+    });
+
+    // diagnostics summary
+    (embed.diagnostics || []).forEach(dx => {
+      docs.push({
+        id: `dx:${dx.diagnostic_id}`,
+        type: "diagnostic",
+        text: `Diagnostic ${dx.date} ApoB ${dx.ApoB} LDL ${dx.LDL_C} hsCRP ${dx.hsCRP} ${dx.Notes || ""}`,
+        payload: dx
+      });
+    });
+
+    // Build vocab + tf
+    const vocab = new Map();
+    const rows = docs.map(d => {
+      const toks = tokens(d.text);
+      const tf = new Map();
+      toks.forEach(t => tf.set(t, (tf.get(t) || 0) + 1));
+      tf.forEach((_v, k) => vocab.set(k, (vocab.get(k) || 0) + 1));
+      return { id: d.id, type: d.type, payload: d.payload, tf };
+    });
+
+    const N = rows.length || 1;
+    const idf = new Map();
+    vocab.forEach((df, term) => idf.set(term, Math.log((1 + N) / (1 + df)) + 1)); // smoothed
+
+    // Precompute norms for cosine
+    const norm = (vec) => Math.sqrt(Array.from(vec.entries()).reduce((s, [t, v]) => s + Math.pow(v * (idf.get(t) || 0), 2), 0)) || 1;
+
+    const rowsWithNorm = rows.map(r => {
+      const n = norm(r.tf);
+      return { ...r, norm: n };
+    });
+
+    return { rows: rowsWithNorm, idf };
+  }, [embed]);
+
+  function tfidfSearch(q, k = 6) {
+    const qtf = new Map();
+    tokens(q).forEach(t => qtf.set(t, (qtf.get(t) || 0) + 1));
+    const idf = searchIndex.idf;
+    const qnorm = Math.sqrt(Array.from(qtf.entries()).reduce((s, [t, v]) => s + Math.pow(v * (idf.get(t) || 0), 2), 0)) || 1;
+
+    const score = (row) => {
+      let dot = 0;
+      qtf.forEach((qv, t) => {
+        if (row.tf.has(t)) {
+          dot += (qv * (idf.get(t) || 0)) * (row.tf.get(t) * (idf.get(t) || 0));
+        }
+      });
+      return dot / (row.norm * qnorm);
+    };
+
+    return searchIndex.rows
+      .map(r => ({ ...r, score: score(r) }))
+      .filter(r => r.score > 0.02)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, k);
+  }
+
+  // ---------- helpers already in your file we re-use ----------
+  // buildLDLDaily (interpolator) and fmtDate are defined elsewhere in your file.
+
+  // Pearson correlation + LDL↔HRV helper
+  function pearson(xs, ys) {
+    const n = Math.min(xs.length, ys.length);
+    if (!n) return 0;
+    let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+    for (let i = 0; i < n; i++) { const x = +xs[i], y = +ys[i]; sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; }
+    const cov = sxy - (sx * sy) / n;
+    const vx = sxx - (sx * sx) / n;
+    const vy = syy - (sy * sy) / n;
+    const den = Math.sqrt(vx * vy);
+    return (!den || !isFinite(den)) ? 0 : cov / den;
+  }
+  function ldlDaily60() {
+    const wear = (embed.wearable_daily || []).slice(-60);
+    if (!wear.length) return {};
+    const startISO = wear[0].date, endISO = wear[wear.length - 1].date;
+    return buildLDLDaily(embed.diagnostics || [], startISO, endISO);
+  }
+
+  // ---------- time window parsing ----------
+  function parseWindow(text, fallbackEndISO) {
+    const end = fallbackEndISO ? new Date(fallbackEndISO) : new Date();
+    const m = text.toLowerCase().match(/last\s+(\d+)\s*(day|days|week|weeks|month|months)/);
+    if (m) {
+      const n = +m[1];
+      const mult = m[2].startsWith("day") ? 1 : m[2].startsWith("week") ? 7 : 30;
+      const start = new Date(end.getTime() - n * mult * 86400_000);
+      return { start, end };
+    }
+    return null; // caller can default
+  }
+
+  // ---------- intent detection ----------
+  function detectIntent(qRaw) {
+    for (const [re, tag] of synonyms) {
+      const m = qRaw.match(re);
+      if (m) {
+        if (tag.startsWith("OPEN_METRIC_ID")) {
+          const id = tag.split(":")[1];
+          return { type: "OPEN_METRIC", id };
+        }
+
+        if (tag.startsWith("OPEN_METRIC")) {
+          const raw = tag.split(":")[1]?.trim() || m[1]?.trim() || "";
+          const key = raw.toLowerCase();
+          const id = METRIC_NAME_TO_ID[key] || METRIC_NAME_TO_ID[key.replace(/\s+/g, " ")] || null;
+          return id ? { type: "OPEN_METRIC", id } : { type: "QA" };
+        }
+        if (tag.startsWith("RATIONALE")) {
+          const id = (tag.split(":")[1] || m[1] || "").toUpperCase();
+          return { type: "RATIONALE", id };
+        }
+        if (tag === "OPEN_FLOW") return { type: "OPEN_FLOW" };
+        if (tag === "OPEN_PERSONA") return { type: "OPEN_PERSONA" };
+
+        if (tag === "LATEST_DIAG") return { type: "LATEST_DIAG" };
+      }
+    }
+
+    // metric open (looser)
+    const openMetric = qRaw.match(/open\s+([a-z- ]+)(?:\s+metric|\s+card)?/i);
+    if (openMetric) {
+      const name = openMetric[1].trim().toLowerCase();
+      const id = METRIC_NAME_TO_ID[name] || METRIC_NAME_TO_ID[name.replace(/\s+/g, " ")];
+      if (id) return { type: "OPEN_METRIC", id };
+    }
+
+    // generic 'why ID'
+    const why = qRaw.match(/\bwhy\b.*\b(i\d{3,4}|d\d{2,3})\b/i);
+    if (why) return { type: "RATIONALE", id: why[1].toUpperCase() };
+
+    // metric summary queries (e.g., “avg hrv last 14 days”)
+    const metricAsk = qRaw.match(/\b(hrv|recovery|deep(?: sleep)?|rem(?: sleep)?|steps|ldl(?:-c)?|apob|hdl|hs-?crp)\b/i);
+    if (metricAsk) {
+      const id = METRIC_NAME_TO_ID[metricAsk[1].toLowerCase().replace(/\s+/g, " ")] || null;
+      if (id) return { type: "METRIC_SUMMARY", id };
+    }
+
+    return { type: "QA" };
+  }
+
+  // ---------- NLG helpers ----------
+  const say = {
+    corr(r) {
+      const s = (Math.round(r * 100) / 100).toFixed(2);
+      const qual = r < -0.5 ? "strong inverse" :
+        r < -0.2 ? "moderate inverse" :
+          r > 0.5 ? "strong direct" :
+            r > 0.2 ? "moderate direct" : "weak/none";
+      return `LDL vs HRV correlation r = ${s} (${qual}).`;
+    },
+    latestDiag(dx) {
+      return `Latest panel (${fmtDate(dx.date)}): ApoB ${dx.ApoB}, LDL-C ${dx.LDL_C}, HDL-C ${dx.HDL_C}, hs-CRP ${dx.hsCRP}.`;
+    },
+    metricSummary(id, start, end, avg) {
+      const pretty = {
+        HRV_ms: "HRV",
+        recovery_pct: "Recovery",
+        deep_sleep_min: "Deep sleep",
+        rem_sleep_min: "REM sleep",
+        steps: "Steps",
+        LDL_C: "LDL-C",
+        ApoB: "ApoB",
+        HDL_C: "HDL-C",
+        hsCRP: "hs-CRP"
+      }[id] || id;
+      const unit = {
+        HRV_ms: "ms", recovery_pct: "%", deep_sleep_min: "min", rem_sleep_min: "min",
+        steps: "", LDL_C: "mg/dL", ApoB: "", HDL_C: "", hsCRP: "mg/L"
+      }[id] || "";
+      const val = avg == null ? "—" : (id.includes("HRV") ? avg.toFixed(1) : Math.round(avg));
+      return `${pretty} average ${val}${unit ? " " + unit : ""} from ${fmtDate(start)} to ${fmtDate(end)}.`;
+    }
+  };
+
+  // ---------- actions ----------
+  const pushAssistantText = (text) =>
+    setMsgs(m => [...m, { role: "assistant", kind: "text", content: text }]);
+
+  const pushAssistantChart = (title, rows) =>
+    setMsgs(m => [...m, { role: "assistant", kind: "chart", title, rows }]);
+
+  const pushAssistantList = (title, items) =>
+    setMsgs(m => [...m, { role: "assistant", kind: "list", title, items }]);
+
+  function handleQuick(cmd) {
+    setInput(cmd);
+    setTimeout(() => send(cmd), 0);
+  }
+
+  function avgOverWindow(id, start, end) {
+    const wear = embed.wearable_daily || [];
+    // diagnostics-derived stream for LDL/ApoB/HDL/hsCRP via buildDailyFromDiagnostics-like maps
+    const diagMap = (() => {
+      const map = {};
+      const w = wear;
+      if (!w.length) return map;
+      const startISO = w[0].date, endISO = w[w.length - 1].date;
+      const D = {
+        ApoB: buildDailyFromDiagnostics(embed.diagnostics || [], "ApoB", startISO, endISO),
+        HDL_C: buildDailyFromDiagnostics(embed.diagnostics || [], "HDL_C", startISO, endISO),
+        hsCRP: buildDailyFromDiagnostics(embed.diagnostics || [], "hsCRP", startISO, endISO),
+        LDL_C: buildLDLDaily(embed.diagnostics || [], startISO, endISO),
+      };
+      return D[id] || {};
+    })();
+
+    const arr = (embed.wearable_daily || []).filter(d => {
+      const dt = new Date(d.date);
+      return dt >= start && dt <= end;
+    }).map(d => {
+      if (["LDL_C", "ApoB", "HDL_C", "hsCRP"].includes(id)) {
+        const v = diagMap[d.date];
+        return v == null ? null : +v;
+      }
+      return +d[id.replace(/_.+$/, "")] || +d[id] || null;
+    }).filter(v => v != null);
+
+    if (!arr.length) return null;
+    const sum = arr.reduce((s, v) => s + v, 0);
+    return sum / arr.length;
+  }
+
+  async function send(forcedText) {
+    const q = (forcedText ?? input).trim();
+    if (!q || sending) return;
+
+    const next = [...msgs, { role: "user", kind: "text", content: q }];
+    setMsgs(next);
+    setInput("");
+    setSending(true);
+
+    try {
+      const intent = detectIntent(q);
+      const wear = embed.wearable_daily || [];
+      const lastISO = wear.length ? wear[wear.length - 1].date : new Date().toISOString().slice(0, 10);
+      const win = parseWindow(q, lastISO) || { start: new Date(new Date(lastISO).getTime() - 30 * 86400_000), end: new Date(lastISO) };
+
+      if (intent.type === "OPEN_FLOW") {
+        onOpenFlow?.();
+        pushAssistantText("Opening Decision Flow…");
+      } else if (intent.type === "OPEN_PERSONA") {
+        onOpenPersona?.();
+        pushAssistantText("Opening Member Persona…");
+      } else if (intent.type === "OPEN_METRIC" && intent.id) {
+        onOpenMetric?.(intent.id);
+        pushAssistantText(`Opening metric card: ${intent.id}…`);
+      } else if (intent.type === "CORR_LDL_HRV") {
+        const days = /last\s+(\d+)/i.test(q) ? Math.max(7, Math.min(90, +q.match(/last\s+(\d+)/i)[1])) : 60;
+        const { r, rows } = correlationLDLvsHRV(days);
+        pushAssistantText(say.corr(r));
+        if (rows.length >= 4) pushAssistantChart(`LDL vs HRV (last ${rows.length}d)`, rows);
+      } else if (intent.type === "LATEST_DIAG") {
+        const dxs = embed.diagnostics || [];
+        if (dxs.length) pushAssistantText(say.latestDiag(dxs[dxs.length - 1]));
+        else pushAssistantText("I don’t have diagnostics in this EMBED.");
+      } else if (intent.type === "RATIONALE" && intent.id) {
+        const id = intent.id;
+        const dec =
+          (embed.interventions || []).find(x => (x.intervention_id || "").toUpperCase() === id) ||
+          (embed.diagnostics || []).find(x => (x.diagnostic_id || "").toUpperCase() === id);
+        const rat = (embed.rationales || []).find(r => (r.decision_id || "").toUpperCase() === id);
+        if (!dec) pushAssistantText(`I couldn’t find a decision ${id}.`);
+        else {
+          const date = dec.date || dec.start_at || dec.end_at;
+          pushAssistantText(`Decision ${id} on ${fmtDate(date)} — ${rat?.reason_summary || "No rationale available."}`);
+          const evidenceIds = rat?.evidence_message_ids || [];
+          if (evidenceIds.length) {
+            const items = (embed.chat || []).filter(m => evidenceIds.includes(m.message_id)).map(m => `• ${m.sender}: ${m.text}`);
+            pushAssistantList("Evidence messages", items);
+          }
+          onOpenFlow?.(id);
+        }
+      } else if (intent.type === "METRIC_SUMMARY" && intent.id) {
+        const start = win.start, end = win.end;
+        const avg = avgOverWindow(intent.id, start, end);
+        pushAssistantText(say.metricSummary(intent.id, start, end, avg));
+      } else {
+        // “LLM-like” local QA: TF-IDF retrieval + stitched answer
+        const hits = tfidfSearch(q, 6);
+        if (hits.length) {
+          const top = hits.slice(0, 3).map(h => {
+            if (h.type === "msg") return `• ${h.payload.sender}: ${h.payload.text}`;
+            if (h.type === "diagnostic") {
+              const d = h.payload;
+              return `• Dx ${fmtDate(d.date)} — ApoB ${d.ApoB}, LDL-C ${d.LDL_C}, hs-CRP ${d.hsCRP}`;
+            }
+            if (h.type === "intervention") {
+              const iv = h.payload;
+              return `• ${iv.title} (${iv.type}) — ${iv.owner || "Team"}: ${iv.expected?.note || iv.actual?.note || ""}`;
+            }
+            return `• ${h.id}`;
+          });
+          pushAssistantText("Here’s what I found in the embedded data:");
+          pushAssistantList("Relevant items", top);
+        } else {
+          pushAssistantText("I couldn’t match that in the member's data. Try “open flow preview”, “latest diagnostics”, or “HRV last 14 days”.");
+        }
+      }
+    } catch (e) {
+      pushAssistantText(`⚠️ ${String(e.message || e)}`);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  // ---------- UI ----------
+  const Quick = ({ label, onClick }) => (
+    <button
+      onClick={onClick}
+      className="px-2.5 py-1 rounded-full text-xs border bg-white/80 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:bg-white dark:hover:bg-zinc-900 transition"
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <Card className="p-0 overflow-hidden">
+      <div className="border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-5 h-5" />
+          <div className="font-semibold">AI Assistant</div>
+        </div>
+      </div>
+
+      <div className="px-4 pt-3 pb-5 mb-2 flex items-center gap-2 gap-y-2 flex-wrap">
+        <Quick label="Open Flow preview" onClick={() => handleQuick("open flow preview")} />
+        <Quick label="Open Persona" onClick={() => handleQuick("open persona")} />
+        {/* open metrics directly */}
+        <Quick
+          label="Open HRV metric"
+          onClick={() => { onOpenMetric?.("HRV_ms"); pushAssistantText("Opening metric card: HRV_ms…"); }}
+        />
+        <Quick
+          label="Open Recovery metric"
+          onClick={() => { onOpenMetric?.("recovery_pct"); pushAssistantText("Opening metric card: recovery_pct…"); }}
+        />
+        <Quick
+          label="Open LDL-C metric"
+          onClick={() => { onOpenMetric?.("LDL_C"); pushAssistantText("Opening metric card: LDL_C…"); }}
+        />
+        <Quick label="Latest diagnostics" onClick={() => handleQuick("latest diagnostics")} />
+      </div>
+
+      <div className="flex flex-col" style={{ height: `${containerHeightRem}rem` }}>
+        {/* messages */}
+        <div ref={scrollRef} className="flex-1 overflow-auto p-4 space-y-3">
+          {msgs.map((m, i) => {
+            const isAssistant = m.role === "assistant";
+
+            // Different bubble shades (light/dark)
+            const sideCls = isAssistant
+              ? "bg-gradient-to-tr from-sky-50/90 to-emerald-50/90 dark:from-sky-900/30 dark:to-emerald-900/30 border-sky-200/70 dark:border-sky-800/60"
+              : "bg-white/90 dark:bg-zinc-900/70 border-zinc-200/60 dark:border-zinc-800/60 ml-auto";
+
+            const baseCls = "max-w-[85%] rounded-2xl px-3 py-2 border shadow-sm";
+
+            if (m.kind === "chart") {
+              return (
+                <div key={i} className={`${baseCls} ${sideCls}`}>
+                  <div className="text-[11px] text-zinc-500 mb-1">{isAssistant ? "Assistant" : "You"}</div>
+                  <div className="text-sm font-medium mb-2">{m.title}</div>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={m.rows} margin={{ top: 6, right: 12, left: -6, bottom: 6 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" tickMargin={6} minTickGap={18} />
+                        <YAxis yAxisId="left" />
+                        <YAxis yAxisId="right" orientation="right" />
+                        <Tooltip
+                          content={
+                            <SeriesTooltip
+                              dark={dark}
+                              titleFmt={(l) => `Date: ${l}`}
+                              valueFormatter={(v) => String(v)}
+                            />
+                          }
+                        />
+                        <Legend />
+                        <Line yAxisId="left" type="monotone" dataKey="LDL_C" name="LDL-C" stroke="#ef4444" dot={false} strokeWidth={2.25} />
+                        <Line yAxisId="right" type="monotone" dataKey="HRV_ms" name="HRV (ms)" stroke="#10b981" dot={{ r: 1.6 }} strokeWidth={2.25} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              );
+            }
+
+            if (m.kind === "list") {
+              return (
+                <div key={i} className={`${baseCls} ${sideCls}`}>
+                  <div className="text-[11px] text-zinc-500 mb-1">{isAssistant ? "Assistant" : "You"}</div>
+                  <div className="text-sm font-medium">{m.title}</div>
+                  <ul className="mt-1 text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
+                    {m.items.map((t, idx) => <li key={idx}>{t}</li>)}
+                  </ul>
+                </div>
+              );
+            }
+
+            return (
+              <div key={i} className={`${baseCls} ${sideCls}`}>
+                <div className="text-[11px] text-zinc-500 mb-1">{isAssistant ? "Assistant" : "You"}</div>
+                <div className="text-sm whitespace-pre-wrap leading-relaxed">{m.content}</div>
+              </div>
+            );
+          })}
+
+          {sending && (
+            <div className="inline-flex items-center gap-2 text-xs text-zinc-500">
+              <Loader2 className="w-4 h-4 animate-spin" /> thinking…
+            </div>
+          )}
+        </div>
+
+        {/* input */}
+        <div className="border-t border-zinc-200 dark:border-zinc-800 p-3">
+          <div className="flex items-center gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask anything about the member."
+              onKeyDown={(e) => (e.key === "Enter") && send()}
+            />
+            <Button onClick={() => send()} disabled={sending || !input.trim()}>
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
+          </div>
+          <div className="text-[11px] text-zinc-500 mt-1">AI can make mistakes.</div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1008,6 +1553,13 @@ export default function App() {
 
 
   const ctx = useMemo(() => ({ ...bundle, chat, rationales }), [bundle, chat, rationales]);
+
+
+  const handleOpenChatByMessageId = (mid) => {
+    setFocusMsgId(mid);
+    setChatOpen(true);
+  };
+
 
 
   const lastUpdated = useMemo(() => {
@@ -2716,6 +3268,20 @@ export default function App() {
             )}
           </Card>
         </div>
+
+        <Card className="mt-6" data-anchor="assistant">
+          <ChatBot
+            embed={bundle}
+            dark={dark}
+            onOpenFlow={(id) => { setFlowOpen(true); if (id) openDecisionById(id); }}
+            onOpenPersona={() => setPersonaOpen(true)}
+            onOpenMetric={(metricId) => setMetricOpen(metricId)}
+          />
+        </Card>
+
+
+
+
 
 
         {/* Full-screen metric modal */}
