@@ -80,48 +80,306 @@ function isTravelDay(date, trips) {
 // --- HARD-CODED WEARABLE DATA (no generation) ---
 // Range targets used below (46y male):
 // HRV 38–65 ms • Recovery 55–90% • Deep 75–110 min • REM 90–140 min • Steps 8k–11k
+// const WEARABLE_HARDCODED = [
+//   { date: "2025-03-01", member_id: "M0001", HRV_ms: 41.2, recovery_pct: 49, deep_sleep_min: 72, rem_sleep_min: 96, steps: 7800 },
+//   { date: "2025-03-02", member_id: "M0001", HRV_ms: 42.0, recovery_pct: 50, deep_sleep_min: 76, rem_sleep_min: 98, steps: 8200 },
+//   { date: "2025-03-03", member_id: "M0001", HRV_ms: 39.5, recovery_pct: 51, deep_sleep_min: 74, rem_sleep_min: 95, steps: 7600 },
+//   { date: "2025-03-04", member_id: "M0001", HRV_ms: 36.8, recovery_pct: 48, deep_sleep_min: 70, rem_sleep_min: 92, steps: 7300 },  // HRV + Recovery below range (red)
+//   { date: "2025-03-05", member_id: "M0001", HRV_ms: 40.3, recovery_pct: 52, deep_sleep_min: 78, rem_sleep_min: 97, steps: 8600 },
+//   { date: "2025-03-06", member_id: "M0001", HRV_ms: 44.1, recovery_pct: 53, deep_sleep_min: 80, rem_sleep_min: 100, steps: 9100 },
+//   { date: "2025-03-07", member_id: "M0001", HRV_ms: 46.0, recovery_pct: 55, deep_sleep_min: 82, rem_sleep_min: 102, steps: 9800 },  // Recovery enters green
+//   { date: "2025-03-08", member_id: "M0001", HRV_ms: 38.0, recovery_pct: 54, deep_sleep_min: 76, rem_sleep_min: 96, steps: 8200 },
+//   { date: "2025-03-09", member_id: "M0001", HRV_ms: 37.4, recovery_pct: 52, deep_sleep_min: 75, rem_sleep_min: 94, steps: 8000 },  // HRV red (below)
+//   { date: "2025-03-10", member_id: "M0001", HRV_ms: 43.2, recovery_pct: 56, deep_sleep_min: 84, rem_sleep_min: 104, steps: 10500 },
+//   { date: "2025-03-11", member_id: "M0001", HRV_ms: 45.0, recovery_pct: 57, deep_sleep_min: 88, rem_sleep_min: 108, steps: 11200 }, // Steps above (good-out)
+//   { date: "2025-03-12", member_id: "M0001", HRV_ms: 47.5, recovery_pct: 58, deep_sleep_min: 90, rem_sleep_min: 110, steps: 11800 },
+//   { date: "2025-03-13", member_id: "M0001", HRV_ms: 49.0, recovery_pct: 59, deep_sleep_min: 86, rem_sleep_min: 106, steps: 11500 },
+//   { date: "2025-03-14", member_id: "M0001", HRV_ms: 51.2, recovery_pct: 60, deep_sleep_min: 92, rem_sleep_min: 112, steps: 9800 },  // Deep above (good-out)
+//   { date: "2025-03-15", member_id: "M0001", HRV_ms: 52.6, recovery_pct: 58, deep_sleep_min: 88, rem_sleep_min: 104, steps: 9300 },
+//   { date: "2025-03-16", member_id: "M0001", HRV_ms: 50.1, recovery_pct: 57, deep_sleep_min: 85, rem_sleep_min: 101, steps: 8700 },
+//   { date: "2025-03-17", member_id: "M0001", HRV_ms: 48.4, recovery_pct: 55, deep_sleep_min: 82, rem_sleep_min: 100, steps: 8500 },
+//   { date: "2025-03-18", member_id: "M0001", HRV_ms: 46.7, recovery_pct: 54, deep_sleep_min: 80, rem_sleep_min: 98, steps: 8200 },
+//   { date: "2025-03-19", member_id: "M0001", HRV_ms: 44.9, recovery_pct: 53, deep_sleep_min: 78, rem_sleep_min: 96, steps: 7900 },
+//   { date: "2025-03-20", member_id: "M0001", HRV_ms: 42.8, recovery_pct: 56, deep_sleep_min: 83, rem_sleep_min: 102, steps: 11000 },
+//   { date: "2025-03-21", member_id: "M0001", HRV_ms: 41.0, recovery_pct: 55, deep_sleep_min: 81, rem_sleep_min: 100, steps: 12000 }, // Steps above (good-out)
+//   { date: "2025-03-22", member_id: "M0001", HRV_ms: 39.2, recovery_pct: 53, deep_sleep_min: 77, rem_sleep_min: 98, steps: 9800 },
+//   { date: "2025-03-23", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 52, deep_sleep_min: 79, rem_sleep_min: 97, steps: 9200 },
+//   { date: "2025-03-24", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 57, deep_sleep_min: 84, rem_sleep_min: 105, steps: 10000 },
+//   { date: "2025-03-25", member_id: "M0001", HRV_ms: 46.3, recovery_pct: 58, deep_sleep_min: 88, rem_sleep_min: 109, steps: 10800 },
+//   { date: "2025-03-26", member_id: "M0001", HRV_ms: 48.9, recovery_pct: 59, deep_sleep_min: 90, rem_sleep_min: 112, steps: 12500 }, // Deep above + steps above
+//   { date: "2025-03-27", member_id: "M0001", HRV_ms: 50.5, recovery_pct: 60, deep_sleep_min: 87, rem_sleep_min: 108, steps: 9900 },
+//   { date: "2025-03-28", member_id: "M0001", HRV_ms: 52.0, recovery_pct: 58, deep_sleep_min: 85, rem_sleep_min: 104, steps: 9300 },
+//   { date: "2025-03-29", member_id: "M0001", HRV_ms: 49.8, recovery_pct: 57, deep_sleep_min: 82, rem_sleep_min: 101, steps: 8900 },
+//   { date: "2025-03-30", member_id: "M0001", HRV_ms: 47.2, recovery_pct: 55, deep_sleep_min: 80, rem_sleep_min: 99, steps: 8600 },
+//   { date: "2025-03-31", member_id: "M0001", HRV_ms: 45.5, recovery_pct: 54, deep_sleep_min: 78, rem_sleep_min: 97, steps: 8300 },
+//   { date: "2025-04-01", member_id: "M0001", HRV_ms: 43.6, recovery_pct: 53, deep_sleep_min: 76, rem_sleep_min: 95, steps: 8000 },
+//   { date: "2025-04-02", member_id: "M0001", HRV_ms: 41.9, recovery_pct: 56, deep_sleep_min: 83, rem_sleep_min: 102, steps: 10800 },
+//   { date: "2025-04-03", member_id: "M0001", HRV_ms: 40.0, recovery_pct: 54, deep_sleep_min: 79, rem_sleep_min: 98, steps: 9700 },
+//   { date: "2025-04-04", member_id: "M0001", HRV_ms: 38.3, recovery_pct: 53, deep_sleep_min: 77, rem_sleep_min: 96, steps: 9400 },
+//   { date: "2025-04-05", member_id: "M0001", HRV_ms: 39.0, recovery_pct: 52, deep_sleep_min: 74, rem_sleep_min: 94, steps: 9000 },  // Deep below (red)
+//   { date: "2025-04-06", member_id: "M0001", HRV_ms: 42.5, recovery_pct: 58, deep_sleep_min: 85, rem_sleep_min: 105, steps: 11000 },
+//   { date: "2025-04-07", member_id: "M0001", HRV_ms: 45.1, recovery_pct: 59, deep_sleep_min: 88, rem_sleep_min: 108, steps: 11800 },
+//   { date: "2025-04-08", member_id: "M0001", HRV_ms: 47.6, recovery_pct: 61, deep_sleep_min: 92, rem_sleep_min: 112, steps: 12200 },
+//   { date: "2025-04-09", member_id: "M0001", HRV_ms: 49.9, recovery_pct: 60, deep_sleep_min: 89, rem_sleep_min: 109, steps: 11500 }
+// ];
+
+
+
+// Wearables for 8 months: 2025-02-01 → 2025-09-30
+// Travel weeks annotated below. Values are hardcoded (no runtime generation).
 const WEARABLE_HARDCODED = [
-  { date: "2025-03-01", member_id: "M0001", HRV_ms: 41.2, recovery_pct: 49, deep_sleep_min: 72, rem_sleep_min: 96, steps: 7800 },
-  { date: "2025-03-02", member_id: "M0001", HRV_ms: 42.0, recovery_pct: 50, deep_sleep_min: 76, rem_sleep_min: 98, steps: 8200 },
-  { date: "2025-03-03", member_id: "M0001", HRV_ms: 39.5, recovery_pct: 51, deep_sleep_min: 74, rem_sleep_min: 95, steps: 7600 },
-  { date: "2025-03-04", member_id: "M0001", HRV_ms: 36.8, recovery_pct: 48, deep_sleep_min: 70, rem_sleep_min: 92, steps: 7300 },  // HRV + Recovery below range (red)
-  { date: "2025-03-05", member_id: "M0001", HRV_ms: 40.3, recovery_pct: 52, deep_sleep_min: 78, rem_sleep_min: 97, steps: 8600 },
-  { date: "2025-03-06", member_id: "M0001", HRV_ms: 44.1, recovery_pct: 53, deep_sleep_min: 80, rem_sleep_min: 100, steps: 9100 },
-  { date: "2025-03-07", member_id: "M0001", HRV_ms: 46.0, recovery_pct: 55, deep_sleep_min: 82, rem_sleep_min: 102, steps: 9800 },  // Recovery enters green
-  { date: "2025-03-08", member_id: "M0001", HRV_ms: 38.0, recovery_pct: 54, deep_sleep_min: 76, rem_sleep_min: 96, steps: 8200 },
-  { date: "2025-03-09", member_id: "M0001", HRV_ms: 37.4, recovery_pct: 52, deep_sleep_min: 75, rem_sleep_min: 94, steps: 8000 },  // HRV red (below)
-  { date: "2025-03-10", member_id: "M0001", HRV_ms: 43.2, recovery_pct: 56, deep_sleep_min: 84, rem_sleep_min: 104, steps: 10500 },
-  { date: "2025-03-11", member_id: "M0001", HRV_ms: 45.0, recovery_pct: 57, deep_sleep_min: 88, rem_sleep_min: 108, steps: 11200 }, // Steps above (good-out)
-  { date: "2025-03-12", member_id: "M0001", HRV_ms: 47.5, recovery_pct: 58, deep_sleep_min: 90, rem_sleep_min: 110, steps: 11800 },
-  { date: "2025-03-13", member_id: "M0001", HRV_ms: 49.0, recovery_pct: 59, deep_sleep_min: 86, rem_sleep_min: 106, steps: 11500 },
-  { date: "2025-03-14", member_id: "M0001", HRV_ms: 51.2, recovery_pct: 60, deep_sleep_min: 92, rem_sleep_min: 112, steps: 9800 },  // Deep above (good-out)
-  { date: "2025-03-15", member_id: "M0001", HRV_ms: 52.6, recovery_pct: 58, deep_sleep_min: 88, rem_sleep_min: 104, steps: 9300 },
-  { date: "2025-03-16", member_id: "M0001", HRV_ms: 50.1, recovery_pct: 57, deep_sleep_min: 85, rem_sleep_min: 101, steps: 8700 },
-  { date: "2025-03-17", member_id: "M0001", HRV_ms: 48.4, recovery_pct: 55, deep_sleep_min: 82, rem_sleep_min: 100, steps: 8500 },
-  { date: "2025-03-18", member_id: "M0001", HRV_ms: 46.7, recovery_pct: 54, deep_sleep_min: 80, rem_sleep_min: 98, steps: 8200 },
-  { date: "2025-03-19", member_id: "M0001", HRV_ms: 44.9, recovery_pct: 53, deep_sleep_min: 78, rem_sleep_min: 96, steps: 7900 },
-  { date: "2025-03-20", member_id: "M0001", HRV_ms: 42.8, recovery_pct: 56, deep_sleep_min: 83, rem_sleep_min: 102, steps: 11000 },
-  { date: "2025-03-21", member_id: "M0001", HRV_ms: 41.0, recovery_pct: 55, deep_sleep_min: 81, rem_sleep_min: 100, steps: 12000 }, // Steps above (good-out)
-  { date: "2025-03-22", member_id: "M0001", HRV_ms: 39.2, recovery_pct: 53, deep_sleep_min: 77, rem_sleep_min: 98, steps: 9800 },
-  { date: "2025-03-23", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 52, deep_sleep_min: 79, rem_sleep_min: 97, steps: 9200 },
-  { date: "2025-03-24", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 57, deep_sleep_min: 84, rem_sleep_min: 105, steps: 10000 },
-  { date: "2025-03-25", member_id: "M0001", HRV_ms: 46.3, recovery_pct: 58, deep_sleep_min: 88, rem_sleep_min: 109, steps: 10800 },
-  { date: "2025-03-26", member_id: "M0001", HRV_ms: 48.9, recovery_pct: 59, deep_sleep_min: 90, rem_sleep_min: 112, steps: 12500 }, // Deep above + steps above
-  { date: "2025-03-27", member_id: "M0001", HRV_ms: 50.5, recovery_pct: 60, deep_sleep_min: 87, rem_sleep_min: 108, steps: 9900 },
-  { date: "2025-03-28", member_id: "M0001", HRV_ms: 52.0, recovery_pct: 58, deep_sleep_min: 85, rem_sleep_min: 104, steps: 9300 },
-  { date: "2025-03-29", member_id: "M0001", HRV_ms: 49.8, recovery_pct: 57, deep_sleep_min: 82, rem_sleep_min: 101, steps: 8900 },
-  { date: "2025-03-30", member_id: "M0001", HRV_ms: 47.2, recovery_pct: 55, deep_sleep_min: 80, rem_sleep_min: 99, steps: 8600 },
-  { date: "2025-03-31", member_id: "M0001", HRV_ms: 45.5, recovery_pct: 54, deep_sleep_min: 78, rem_sleep_min: 97, steps: 8300 },
-  { date: "2025-04-01", member_id: "M0001", HRV_ms: 43.6, recovery_pct: 53, deep_sleep_min: 76, rem_sleep_min: 95, steps: 8000 },
-  { date: "2025-04-02", member_id: "M0001", HRV_ms: 41.9, recovery_pct: 56, deep_sleep_min: 83, rem_sleep_min: 102, steps: 10800 },
-  { date: "2025-04-03", member_id: "M0001", HRV_ms: 40.0, recovery_pct: 54, deep_sleep_min: 79, rem_sleep_min: 98, steps: 9700 },
-  { date: "2025-04-04", member_id: "M0001", HRV_ms: 38.3, recovery_pct: 53, deep_sleep_min: 77, rem_sleep_min: 96, steps: 9400 },
-  { date: "2025-04-05", member_id: "M0001", HRV_ms: 39.0, recovery_pct: 52, deep_sleep_min: 74, rem_sleep_min: 94, steps: 9000 },  // Deep below (red)
-  { date: "2025-04-06", member_id: "M0001", HRV_ms: 42.5, recovery_pct: 58, deep_sleep_min: 85, rem_sleep_min: 105, steps: 11000 },
-  { date: "2025-04-07", member_id: "M0001", HRV_ms: 45.1, recovery_pct: 59, deep_sleep_min: 88, rem_sleep_min: 108, steps: 11800 },
-  { date: "2025-04-08", member_id: "M0001", HRV_ms: 47.6, recovery_pct: 61, deep_sleep_min: 92, rem_sleep_min: 112, steps: 12200 },
-  { date: "2025-04-09", member_id: "M0001", HRV_ms: 49.9, recovery_pct: 60, deep_sleep_min: 89, rem_sleep_min: 109, steps: 11500 }
+  { date: "2025-02-01", member_id: "M0001", HRV_ms: 39.9, recovery_pct: 47, deep_sleep_min: 77, rem_sleep_min: 105, steps: 8784 },
+  { date: "2025-02-02", member_id: "M0001", HRV_ms: 41.6, recovery_pct: 49, deep_sleep_min: 75, rem_sleep_min: 92, steps: 10338 },
+  // Travel week: London, UK (2025-02-03 → 2025-02-09)
+  { date: "2025-02-03", member_id: "M0001", HRV_ms: 39.1, recovery_pct: 42, deep_sleep_min: 69, rem_sleep_min: 83, steps: 6782 },
+  { date: "2025-02-04", member_id: "M0001", HRV_ms: 39.7, recovery_pct: 44, deep_sleep_min: 73, rem_sleep_min: 91, steps: 10079 },
+  { date: "2025-02-05", member_id: "M0001", HRV_ms: 38.1, recovery_pct: 42, deep_sleep_min: 69, rem_sleep_min: 89, steps: 10675 },
+  { date: "2025-02-06", member_id: "M0001", HRV_ms: 39.2, recovery_pct: 43, deep_sleep_min: 70, rem_sleep_min: 89, steps: 10374 },
+  { date: "2025-02-07", member_id: "M0001", HRV_ms: 37.8, recovery_pct: 42, deep_sleep_min: 63, rem_sleep_min: 89, steps: 10220 },
+  { date: "2025-02-08", member_id: "M0001", HRV_ms: 38.5, recovery_pct: 41, deep_sleep_min: 64, rem_sleep_min: 93, steps: 11121 },
+  { date: "2025-02-09", member_id: "M0001", HRV_ms: 37.9, recovery_pct: 41, deep_sleep_min: 61, rem_sleep_min: 95, steps: 5309 },
+  { date: "2025-02-10", member_id: "M0001", HRV_ms: 40.3, recovery_pct: 48, deep_sleep_min: 74, rem_sleep_min: 106, steps: 10516 },
+  { date: "2025-02-11", member_id: "M0001", HRV_ms: 41.7, recovery_pct: 46, deep_sleep_min: 73, rem_sleep_min: 95, steps: 11573 },
+  { date: "2025-02-12", member_id: "M0001", HRV_ms: 40.3, recovery_pct: 49, deep_sleep_min: 84, rem_sleep_min: 104, steps: 13277 },
+  { date: "2025-02-13", member_id: "M0001", HRV_ms: 42.8, recovery_pct: 49, deep_sleep_min: 80, rem_sleep_min: 100, steps: 12567 },
+  { date: "2025-02-14", member_id: "M0001", HRV_ms: 40.1, recovery_pct: 45, deep_sleep_min: 66, rem_sleep_min: 93, steps: 10692 },
+  { date: "2025-02-15", member_id: "M0001", HRV_ms: 41.4, recovery_pct: 48, deep_sleep_min: 75, rem_sleep_min: 94, steps: 10263 },
+  { date: "2025-02-16", member_id: "M0001", HRV_ms: 41.9, recovery_pct: 50, deep_sleep_min: 83, rem_sleep_min: 103, steps: 11515 },
+  { date: "2025-02-17", member_id: "M0001", HRV_ms: 42.4, recovery_pct: 51, deep_sleep_min: 82, rem_sleep_min: 108, steps: 13309 },
+  { date: "2025-02-18", member_id: "M0001", HRV_ms: 40.9, recovery_pct: 50, deep_sleep_min: 78, rem_sleep_min: 108, steps: 12253 },
+  { date: "2025-02-19", member_id: "M0001", HRV_ms: 40.2, recovery_pct: 48, deep_sleep_min: 77, rem_sleep_min: 103, steps: 10392 },
+  { date: "2025-02-20", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 51, deep_sleep_min: 83, rem_sleep_min: 98, steps: 11937 },
+  { date: "2025-02-21", member_id: "M0001", HRV_ms: 42.6, recovery_pct: 48, deep_sleep_min: 70, rem_sleep_min: 89, steps: 9626 },
+  { date: "2025-02-22", member_id: "M0001", HRV_ms: 43.0, recovery_pct: 51, deep_sleep_min: 80, rem_sleep_min: 99, steps: 11384 },
+  { date: "2025-02-23", member_id: "M0001", HRV_ms: 41.6, recovery_pct: 50, deep_sleep_min: 80, rem_sleep_min: 95, steps: 10976 },
+  { date: "2025-02-24", member_id: "M0001", HRV_ms: 41.3, recovery_pct: 50, deep_sleep_min: 85, rem_sleep_min: 108, steps: 13504 },
+  { date: "2025-02-25", member_id: "M0001", HRV_ms: 43.0, recovery_pct: 51, deep_sleep_min: 82, rem_sleep_min: 106, steps: 13550 },
+  { date: "2025-02-26", member_id: "M0001", HRV_ms: 42.2, recovery_pct: 52, deep_sleep_min: 78, rem_sleep_min: 102, steps: 11602 },
+  { date: "2025-02-27", member_id: "M0001", HRV_ms: 40.3, recovery_pct: 48, deep_sleep_min: 69, rem_sleep_min: 95, steps: 10008 },
+  { date: "2025-02-28", member_id: "M0001", HRV_ms: 41.7, recovery_pct: 52, deep_sleep_min: 87, rem_sleep_min: 113, steps: 12972 },
+  { date: "2025-03-01", member_id: "M0001", HRV_ms: 41.9, recovery_pct: 48, deep_sleep_min: 70, rem_sleep_min: 100, steps: 8857 },
+  { date: "2025-03-02", member_id: "M0001", HRV_ms: 40.8, recovery_pct: 48, deep_sleep_min: 80, rem_sleep_min: 92, steps: 10325 },
+  // Travel week: New York, USA (2025-03-03 → 2025-03-09)
+  { date: "2025-03-03", member_id: "M0001", HRV_ms: 38.9, recovery_pct: 42, deep_sleep_min: 67, rem_sleep_min: 86, steps: 6677 },
+  { date: "2025-03-04", member_id: "M0001", HRV_ms: 38.8, recovery_pct: 41, deep_sleep_min: 69, rem_sleep_min: 83, steps: 10275 },
+  { date: "2025-03-05", member_id: "M0001", HRV_ms: 37.6, recovery_pct: 41, deep_sleep_min: 63, rem_sleep_min: 88, steps: 10078 },
+  { date: "2025-03-06", member_id: "M0001", HRV_ms: 38.7, recovery_pct: 43, deep_sleep_min: 69, rem_sleep_min: 94, steps: 11046 },
+  { date: "2025-03-07", member_id: "M0001", HRV_ms: 38.6, recovery_pct: 44, deep_sleep_min: 68, rem_sleep_min: 92, steps: 10045 },
+  { date: "2025-03-08", member_id: "M0001", HRV_ms: 38.5, recovery_pct: 44, deep_sleep_min: 63, rem_sleep_min: 86, steps: 11451 },
+  { date: "2025-03-09", member_id: "M0001", HRV_ms: 38.3, recovery_pct: 41, deep_sleep_min: 65, rem_sleep_min: 94, steps: 6133 },
+  { date: "2025-03-10", member_id: "M0001", HRV_ms: 40.8, recovery_pct: 48, deep_sleep_min: 87, rem_sleep_min: 109, steps: 12425 },
+  { date: "2025-03-11", member_id: "M0001", HRV_ms: 41.7, recovery_pct: 49, deep_sleep_min: 85, rem_sleep_min: 101, steps: 12640 },
+  { date: "2025-03-12", member_id: "M0001", HRV_ms: 40.1, recovery_pct: 48, deep_sleep_min: 73, rem_sleep_min: 93, steps: 10539 },
+  { date: "2025-03-13", member_id: "M0001", HRV_ms: 42.5, recovery_pct: 50, deep_sleep_min: 86, rem_sleep_min: 110, steps: 13017 },
+  { date: "2025-03-14", member_id: "M0001", HRV_ms: 42.1, recovery_pct: 52, deep_sleep_min: 85, rem_sleep_min: 107, steps: 12874 },
+  { date: "2025-03-15", member_id: "M0001", HRV_ms: 43.0, recovery_pct: 51, deep_sleep_min: 85, rem_sleep_min: 111, steps: 12708 },
+  { date: "2025-03-16", member_id: "M0001", HRV_ms: 42.3, recovery_pct: 51, deep_sleep_min: 85, rem_sleep_min: 112, steps: 12125 },
+  { date: "2025-03-17", member_id: "M0001", HRV_ms: 41.0, recovery_pct: 51, deep_sleep_min: 83, rem_sleep_min: 100, steps: 12425 },
+  { date: "2025-03-18", member_id: "M0001", HRV_ms: 41.0, recovery_pct: 50, deep_sleep_min: 74, rem_sleep_min: 88, steps: 10431 },
+  { date: "2025-03-19", member_id: "M0001", HRV_ms: 43.0, recovery_pct: 51, deep_sleep_min: 80, rem_sleep_min: 102, steps: 13159 },
+  { date: "2025-03-20", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 48, deep_sleep_min: 74, rem_sleep_min: 95, steps: 11841 },
+  { date: "2025-03-21", member_id: "M0001", HRV_ms: 41.3, recovery_pct: 48, deep_sleep_min: 71, rem_sleep_min: 101, steps: 12074 },
+  { date: "2025-03-22", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 53, deep_sleep_min: 91, rem_sleep_min: 110, steps: 12996 },
+  { date: "2025-03-23", member_id: "M0001", HRV_ms: 41.1, recovery_pct: 47, deep_sleep_min: 72, rem_sleep_min: 88, steps: 10064 },
+  { date: "2025-03-24", member_id: "M0001", HRV_ms: 42.1, recovery_pct: 51, deep_sleep_min: 84, rem_sleep_min: 100, steps: 13013 },
+  { date: "2025-03-25", member_id: "M0001", HRV_ms: 42.2, recovery_pct: 54, deep_sleep_min: 88, rem_sleep_min: 109, steps: 13023 },
+  { date: "2025-03-26", member_id: "M0001", HRV_ms: 42.9, recovery_pct: 53, deep_sleep_min: 82, rem_sleep_min: 103, steps: 12753 },
+  { date: "2025-03-27", member_id: "M0001", HRV_ms: 43.2, recovery_pct: 49, deep_sleep_min: 72, rem_sleep_min: 88, steps: 10061 },
+  { date: "2025-03-28", member_id: "M0001", HRV_ms: 43.2, recovery_pct: 50, deep_sleep_min: 84, rem_sleep_min: 99, steps: 12473 },
+  { date: "2025-03-29", member_id: "M0001", HRV_ms: 43.3, recovery_pct: 49, deep_sleep_min: 75, rem_sleep_min: 103, steps: 11646 },
+  { date: "2025-03-30", member_id: "M0001", HRV_ms: 44.2, recovery_pct: 51, deep_sleep_min: 85, rem_sleep_min: 113, steps: 13575 },
+  { date: "2025-03-31", member_id: "M0001", HRV_ms: 42.9, recovery_pct: 49, deep_sleep_min: 76, rem_sleep_min: 90, steps: 10305 },
+  { date: "2025-04-01", member_id: "M0001", HRV_ms: 42.1, recovery_pct: 52, deep_sleep_min: 84, rem_sleep_min: 113, steps: 13307 },
+  { date: "2025-04-02", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 50, deep_sleep_min: 78, rem_sleep_min: 98, steps: 11817 },
+  { date: "2025-04-03", member_id: "M0001", HRV_ms: 43.7, recovery_pct: 52, deep_sleep_min: 86, rem_sleep_min: 101, steps: 12574 },
+  { date: "2025-04-04", member_id: "M0001", HRV_ms: 41.9, recovery_pct: 48, deep_sleep_min: 66, rem_sleep_min: 84, steps: 10219 },
+  { date: "2025-04-05", member_id: "M0001", HRV_ms: 43.9, recovery_pct: 50, deep_sleep_min: 80, rem_sleep_min: 106, steps: 13171 },
+  { date: "2025-04-06", member_id: "M0001", HRV_ms: 43.9, recovery_pct: 50, deep_sleep_min: 80, rem_sleep_min: 103, steps: 12176 },
+  // Travel week: Seoul, South Korea (2025-04-07 → 2025-04-13)
+  { date: "2025-04-07", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 45, deep_sleep_min: 72, rem_sleep_min: 89, steps: 8531 },
+  { date: "2025-04-08", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 44, deep_sleep_min: 73, rem_sleep_min: 84, steps: 11269 },
+  { date: "2025-04-09", member_id: "M0001", HRV_ms: 40.7, recovery_pct: 44, deep_sleep_min: 74, rem_sleep_min: 86, steps: 11221 },
+  { date: "2025-04-10", member_id: "M0001", HRV_ms: 41.1, recovery_pct: 45, deep_sleep_min: 72, rem_sleep_min: 86, steps: 9977 },
+  { date: "2025-04-11", member_id: "M0001", HRV_ms: 41.1, recovery_pct: 44, deep_sleep_min: 72, rem_sleep_min: 86, steps: 9728 },
+  { date: "2025-04-12", member_id: "M0001", HRV_ms: 41.4, recovery_pct: 45, deep_sleep_min: 71, rem_sleep_min: 90, steps: 10631 },
+  { date: "2025-04-13", member_id: "M0001", HRV_ms: 40.0, recovery_pct: 43, deep_sleep_min: 72, rem_sleep_min: 90, steps: 6082 },
+  { date: "2025-04-14", member_id: "M0001", HRV_ms: 43.5, recovery_pct: 53, deep_sleep_min: 90, rem_sleep_min: 111, steps: 13238 },
+  { date: "2025-04-15", member_id: "M0001", HRV_ms: 41.7, recovery_pct: 52, deep_sleep_min: 82, rem_sleep_min: 99, steps: 12483 },
+  { date: "2025-04-16", member_id: "M0001", HRV_ms: 43.9, recovery_pct: 52, deep_sleep_min: 84, rem_sleep_min: 108, steps: 13593 },
+  { date: "2025-04-17", member_id: "M0001", HRV_ms: 41.3, recovery_pct: 49, deep_sleep_min: 70, rem_sleep_min: 95, steps: 10172 },
+  { date: "2025-04-18", member_id: "M0001", HRV_ms: 45.6, recovery_pct: 53, deep_sleep_min: 90, rem_sleep_min: 112, steps: 13228 },
+  { date: "2025-04-19", member_id: "M0001", HRV_ms: 43.0, recovery_pct: 49, deep_sleep_min: 70, rem_sleep_min: 91, steps: 10536 },
+  { date: "2025-04-20", member_id: "M0001", HRV_ms: 45.6, recovery_pct: 53, deep_sleep_min: 92, rem_sleep_min: 114, steps: 13387 },
+  { date: "2025-04-21", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 50, deep_sleep_min: 84, rem_sleep_min: 96, steps: 12138 },
+  { date: "2025-04-22", member_id: "M0001", HRV_ms: 42.6, recovery_pct: 52, deep_sleep_min: 90, rem_sleep_min: 106, steps: 12981 },
+  { date: "2025-04-23", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 53, deep_sleep_min: 90, rem_sleep_min: 105, steps: 13487 },
+  { date: "2025-04-24", member_id: "M0001", HRV_ms: 43.6, recovery_pct: 52, deep_sleep_min: 89, rem_sleep_min: 108, steps: 12945 },
+  { date: "2025-04-25", member_id: "M0001", HRV_ms: 45.4, recovery_pct: 54, deep_sleep_min: 88, rem_sleep_min: 110, steps: 13087 },
+  { date: "2025-04-26", member_id: "M0001", HRV_ms: 43.1, recovery_pct: 52, deep_sleep_min: 84, rem_sleep_min: 105, steps: 13014 },
+  { date: "2025-04-27", member_id: "M0001", HRV_ms: 45.7, recovery_pct: 54, deep_sleep_min: 92, rem_sleep_min: 115, steps: 13609 },
+  { date: "2025-04-28", member_id: "M0001", HRV_ms: 44.7, recovery_pct: 52, deep_sleep_min: 83, rem_sleep_min: 101, steps: 12485 },
+  { date: "2025-04-29", member_id: "M0001", HRV_ms: 43.9, recovery_pct: 50, deep_sleep_min: 78, rem_sleep_min: 102, steps: 11434 },
+  { date: "2025-04-30", member_id: "M0001", HRV_ms: 44.5, recovery_pct: 52, deep_sleep_min: 88, rem_sleep_min: 115, steps: 13536 },
+  { date: "2025-05-01", member_id: "M0001", HRV_ms: 45.5, recovery_pct: 53, deep_sleep_min: 91, rem_sleep_min: 114, steps: 13515 },
+  { date: "2025-05-02", member_id: "M0001", HRV_ms: 44.3, recovery_pct: 54, deep_sleep_min: 87, rem_sleep_min: 108, steps: 13216 },
+  // Travel week: Jakarta, Indonesia (2025-05-05 → 2025-05-11)
+  { date: "2025-05-03", member_id: "M0001", HRV_ms: 45.8, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 115, steps: 13483 },
+  { date: "2025-05-04", member_id: "M0001", HRV_ms: 43.6, recovery_pct: 51, deep_sleep_min: 80, rem_sleep_min: 97, steps: 11814 },
+  { date: "2025-05-05", member_id: "M0001", HRV_ms: 41.1, recovery_pct: 47, deep_sleep_min: 74, rem_sleep_min: 87, steps: 7672 },
+  { date: "2025-05-06", member_id: "M0001", HRV_ms: 42.5, recovery_pct: 48, deep_sleep_min: 80, rem_sleep_min: 99, steps: 11859 },
+  { date: "2025-05-07", member_id: "M0001", HRV_ms: 41.8, recovery_pct: 49, deep_sleep_min: 80, rem_sleep_min: 94, steps: 12191 },
+  { date: "2025-05-08", member_id: "M0001", HRV_ms: 42.8, recovery_pct: 49, deep_sleep_min: 82, rem_sleep_min: 97, steps: 11487 },
+  { date: "2025-05-09", member_id: "M0001", HRV_ms: 42.7, recovery_pct: 50, deep_sleep_min: 82, rem_sleep_min: 92, steps: 11788 },
+  { date: "2025-05-10", member_id: "M0001", HRV_ms: 41.2, recovery_pct: 47, deep_sleep_min: 76, rem_sleep_min: 93, steps: 11231 },
+  { date: "2025-05-11", member_id: "M0001", HRV_ms: 40.9, recovery_pct: 45, deep_sleep_min: 74, rem_sleep_min: 97, steps: 6010 },
+  { date: "2025-05-12", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 50, deep_sleep_min: 86, rem_sleep_min: 108, steps: 12567 },
+  { date: "2025-05-13", member_id: "M0001", HRV_ms: 45.7, recovery_pct: 54, deep_sleep_min: 92, rem_sleep_min: 102, steps: 13146 },
+  { date: "2025-05-14", member_id: "M0001", HRV_ms: 45.9, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 105, steps: 13283 },
+  { date: "2025-05-15", member_id: "M0001", HRV_ms: 45.3, recovery_pct: 55, deep_sleep_min: 88, rem_sleep_min: 113, steps: 13498 },
+  { date: "2025-05-16", member_id: "M0001", HRV_ms: 44.7, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 103, steps: 12972 },
+  { date: "2025-05-17", member_id: "M0001", HRV_ms: 44.4, recovery_pct: 54, deep_sleep_min: 90, rem_sleep_min: 105, steps: 13185 },
+  { date: "2025-05-18", member_id: "M0001", HRV_ms: 45.0, recovery_pct: 55, deep_sleep_min: 89, rem_sleep_min: 104, steps: 13288 },
+  { date: "2025-05-19", member_id: "M0001", HRV_ms: 45.2, recovery_pct: 53, deep_sleep_min: 86, rem_sleep_min: 103, steps: 12203 },
+  { date: "2025-05-20", member_id: "M0001", HRV_ms: 46.1, recovery_pct: 55, deep_sleep_min: 92, rem_sleep_min: 110, steps: 13350 },
+  { date: "2025-05-21", member_id: "M0001", HRV_ms: 45.4, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 111, steps: 13355 },
+  { date: "2025-05-22", member_id: "M0001", HRV_ms: 45.6, recovery_pct: 54, deep_sleep_min: 87, rem_sleep_min: 103, steps: 12434 },
+  { date: "2025-05-23", member_id: "M0001", HRV_ms: 44.1, recovery_pct: 55, deep_sleep_min: 92, rem_sleep_min: 110, steps: 12977 },
+  { date: "2025-05-24", member_id: "M0001", HRV_ms: 45.4, recovery_pct: 55, deep_sleep_min: 93, rem_sleep_min: 112, steps: 13378 },
+  { date: "2025-05-25", member_id: "M0001", HRV_ms: 46.2, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 111, steps: 13459 },
+  { date: "2025-05-26", member_id: "M0001", HRV_ms: 44.6, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 103, steps: 12683 },
+  { date: "2025-05-27", member_id: "M0001", HRV_ms: 44.8, recovery_pct: 54, deep_sleep_min: 91, rem_sleep_min: 111, steps: 13152 },
+  { date: "2025-05-28", member_id: "M0001", HRV_ms: 45.7, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 114, steps: 13440 },
+  { date: "2025-05-29", member_id: "M0001", HRV_ms: 46.6, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 104, steps: 13067 },
+  { date: "2025-05-30", member_id: "M0001", HRV_ms: 45.5, recovery_pct: 54, deep_sleep_min: 87, rem_sleep_min: 95, steps: 11166 },
+  { date: "2025-05-31", member_id: "M0001", HRV_ms: 44.6, recovery_pct: 54, deep_sleep_min: 91, rem_sleep_min: 109, steps: 13164 },
+  { date: "2025-06-01", member_id: "M0001", HRV_ms: 45.8, recovery_pct: 52, deep_sleep_min: 83, rem_sleep_min: 105, steps: 12561 },
+  // Travel week: London, UK (2025-06-02 → 2025-06-08)
+  { date: "2025-06-02", member_id: "M0001", HRV_ms: 42.0, recovery_pct: 45, deep_sleep_min: 73, rem_sleep_min: 90, steps: 7868 },
+  { date: "2025-06-03", member_id: "M0001", HRV_ms: 42.8, recovery_pct: 46, deep_sleep_min: 80, rem_sleep_min: 91, steps: 10472 },
+  { date: "2025-06-04", member_id: "M0001", HRV_ms: 42.5, recovery_pct: 48, deep_sleep_min: 84, rem_sleep_min: 92, steps: 11147 },
+  { date: "2025-06-05", member_id: "M0001", HRV_ms: 41.6, recovery_pct: 46, deep_sleep_min: 79, rem_sleep_min: 90, steps: 10977 },
+  { date: "2025-06-06", member_id: "M0001", HRV_ms: 43.2, recovery_pct: 48, deep_sleep_min: 84, rem_sleep_min: 100, steps: 10984 },
+  { date: "2025-06-07", member_id: "M0001", HRV_ms: 42.0, recovery_pct: 47, deep_sleep_min: 77, rem_sleep_min: 97, steps: 11046 },
+  { date: "2025-06-08", member_id: "M0001", HRV_ms: 41.3, recovery_pct: 45, deep_sleep_min: 77, rem_sleep_min: 96, steps: 6428 },
+  { date: "2025-06-09", member_id: "M0001", HRV_ms: 46.1, recovery_pct: 57, deep_sleep_min: 93, rem_sleep_min: 114, steps: 13551 },
+  { date: "2025-06-10", member_id: "M0001", HRV_ms: 44.6, recovery_pct: 53, deep_sleep_min: 86, rem_sleep_min: 103, steps: 12718 },
+  { date: "2025-06-11", member_id: "M0001", HRV_ms: 46.1, recovery_pct: 55, deep_sleep_min: 91, rem_sleep_min: 105, steps: 13190 },
+  { date: "2025-06-12", member_id: "M0001", HRV_ms: 47.0, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 108, steps: 13377 },
+  { date: "2025-06-13", member_id: "M0001", HRV_ms: 46.1, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 111, steps: 13368 },
+  { date: "2025-06-14", member_id: "M0001", HRV_ms: 46.3, recovery_pct: 56, deep_sleep_min: 93, rem_sleep_min: 110, steps: 13328 },
+  { date: "2025-06-15", member_id: "M0001", HRV_ms: 46.2, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 108, steps: 13312 },
+  { date: "2025-06-16", member_id: "M0001", HRV_ms: 44.8, recovery_pct: 55, deep_sleep_min: 92, rem_sleep_min: 109, steps: 13278 },
+  { date: "2025-06-17", member_id: "M0001", HRV_ms: 45.6, recovery_pct: 54, deep_sleep_min: 87, rem_sleep_min: 108, steps: 13002 },
+  { date: "2025-06-18", member_id: "M0001", HRV_ms: 46.9, recovery_pct: 57, deep_sleep_min: 93, rem_sleep_min: 113, steps: 13468 },
+  { date: "2025-06-19", member_id: "M0001", HRV_ms: 44.7, recovery_pct: 54, deep_sleep_min: 88, rem_sleep_min: 108, steps: 13246 },
+  { date: "2025-06-20", member_id: "M0001", HRV_ms: 45.3, recovery_pct: 56, deep_sleep_min: 90, rem_sleep_min: 111, steps: 13371 },
+  { date: "2025-06-21", member_id: "M0001", HRV_ms: 46.5, recovery_pct: 55, deep_sleep_min: 91, rem_sleep_min: 109, steps: 13272 },
+  { date: "2025-06-22", member_id: "M0001", HRV_ms: 46.8, recovery_pct: 57, deep_sleep_min: 93, rem_sleep_min: 112, steps: 13386 },
+  { date: "2025-06-23", member_id: "M0001", HRV_ms: 46.6, recovery_pct: 55, deep_sleep_min: 89, rem_sleep_min: 109, steps: 13173 },
+  { date: "2025-06-24", member_id: "M0001", HRV_ms: 46.2, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 112, steps: 13485 },
+  { date: "2025-06-25", member_id: "M0001", HRV_ms: 46.3, recovery_pct: 56, deep_sleep_min: 93, rem_sleep_min: 107, steps: 13298 },
+  { date: "2025-06-26", member_id: "M0001", HRV_ms: 46.8, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 104, steps: 12914 },
+  { date: "2025-06-27", member_id: "M0001", HRV_ms: 45.6, recovery_pct: 55, deep_sleep_min: 91, rem_sleep_min: 111, steps: 13343 },
+  { date: "2025-06-28", member_id: "M0001", HRV_ms: 46.0, recovery_pct: 55, deep_sleep_min: 91, rem_sleep_min: 113, steps: 13438 },
+  { date: "2025-06-29", member_id: "M0001", HRV_ms: 46.2, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 106, steps: 13190 },
+  { date: "2025-06-30", member_id: "M0001", HRV_ms: 45.5, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 106, steps: 13236 },
+  { date: "2025-07-01", member_id: "M0001", HRV_ms: 45.5, recovery_pct: 55, deep_sleep_min: 89, rem_sleep_min: 103, steps: 13059 },
+  { date: "2025-07-02", member_id: "M0001", HRV_ms: 46.6, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 105, steps: 13259 },
+  { date: "2025-07-03", member_id: "M0001", HRV_ms: 45.8, recovery_pct: 57, deep_sleep_min: 92, rem_sleep_min: 112, steps: 13539 },
+  { date: "2025-07-04", member_id: "M0001", HRV_ms: 47.8, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 112, steps: 13419 },
+  { date: "2025-07-05", member_id: "M0001", HRV_ms: 46.9, recovery_pct: 55, deep_sleep_min: 89, rem_sleep_min: 109, steps: 13217 },
+  { date: "2025-07-06", member_id: "M0001", HRV_ms: 46.2, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 109, steps: 13312 },
+  // Travel week: New York, USA (2025-07-07 → 2025-07-13)
+  { date: "2025-07-07", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 47, deep_sleep_min: 80, rem_sleep_min: 97, steps: 8320 },
+  { date: "2025-07-08", member_id: "M0001", HRV_ms: 44.8, recovery_pct: 49, deep_sleep_min: 86, rem_sleep_min: 97, steps: 11473 },
+  { date: "2025-07-09", member_id: "M0001", HRV_ms: 43.4, recovery_pct: 48, deep_sleep_min: 82, rem_sleep_min: 94, steps: 11278 },
+  { date: "2025-07-10", member_id: "M0001", HRV_ms: 43.5, recovery_pct: 48, deep_sleep_min: 80, rem_sleep_min: 102, steps: 11296 },
+  { date: "2025-07-11", member_id: "M0001", HRV_ms: 44.5, recovery_pct: 49, deep_sleep_min: 86, rem_sleep_min: 104, steps: 11644 },
+  { date: "2025-07-12", member_id: "M0001", HRV_ms: 43.6, recovery_pct: 48, deep_sleep_min: 83, rem_sleep_min: 102, steps: 10761 },
+  { date: "2025-07-13", member_id: "M0001", HRV_ms: 44.0, recovery_pct: 48, deep_sleep_min: 82, rem_sleep_min: 100, steps: 6269 },
+  { date: "2025-07-14", member_id: "M0001", HRV_ms: 47.1, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 110, steps: 13483 },
+  { date: "2025-07-15", member_id: "M0001", HRV_ms: 45.8, recovery_pct: 57, deep_sleep_min: 91, rem_sleep_min: 108, steps: 13360 },
+  { date: "2025-07-16", member_id: "M0001", HRV_ms: 48.0, recovery_pct: 59, deep_sleep_min: 93, rem_sleep_min: 111, steps: 13298 },
+  { date: "2025-07-17", member_id: "M0001", HRV_ms: 46.6, recovery_pct: 55, deep_sleep_min: 88, rem_sleep_min: 100, steps: 12138 },
+  { date: "2025-07-18", member_id: "M0001", HRV_ms: 47.6, recovery_pct: 57, deep_sleep_min: 90, rem_sleep_min: 108, steps: 13471 },
+  { date: "2025-07-19", member_id: "M0001", HRV_ms: 46.1, recovery_pct: 55, deep_sleep_min: 88, rem_sleep_min: 106, steps: 13346 },
+  { date: "2025-07-20", member_id: "M0001", HRV_ms: 48.0, recovery_pct: 59, deep_sleep_min: 92, rem_sleep_min: 114, steps: 13582 },
+  { date: "2025-07-21", member_id: "M0001", HRV_ms: 46.2, recovery_pct: 55, deep_sleep_min: 89, rem_sleep_min: 110, steps: 13268 },
+  { date: "2025-07-22", member_id: "M0001", HRV_ms: 46.1, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 111, steps: 13377 },
+  { date: "2025-07-23", member_id: "M0001", HRV_ms: 48.0, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 104, steps: 12983 },
+  { date: "2025-07-24", member_id: "M0001", HRV_ms: 47.2, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 111, steps: 13468 },
+  { date: "2025-07-25", member_id: "M0001", HRV_ms: 45.5, recovery_pct: 57, deep_sleep_min: 93, rem_sleep_min: 111, steps: 13290 },
+  { date: "2025-07-26", member_id: "M0001", HRV_ms: 46.1, recovery_pct: 55, deep_sleep_min: 91, rem_sleep_min: 108, steps: 13103 },
+  { date: "2025-07-27", member_id: "M0001", HRV_ms: 46.8, recovery_pct: 57, deep_sleep_min: 92, rem_sleep_min: 113, steps: 13498 },
+  { date: "2025-07-28", member_id: "M0001", HRV_ms: 46.8, recovery_pct: 57, deep_sleep_min: 91, rem_sleep_min: 112, steps: 13378 },
+  { date: "2025-07-29", member_id: "M0001", HRV_ms: 45.7, recovery_pct: 55, deep_sleep_min: 90, rem_sleep_min: 108, steps: 13173 },
+  { date: "2025-07-30", member_id: "M0001", HRV_ms: 47.1, recovery_pct: 57, deep_sleep_min: 93, rem_sleep_min: 115, steps: 13566 },
+  { date: "2025-07-31", member_id: "M0001", HRV_ms: 45.9, recovery_pct: 55, deep_sleep_min: 91, rem_sleep_min: 114, steps: 13447 },
+  { date: "2025-08-01", member_id: "M0001", HRV_ms: 46.7, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 114, steps: 13545 },
+  { date: "2025-08-02", member_id: "M0001", HRV_ms: 46.0, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 113, steps: 13450 },
+  // Travel week: Seoul, South Korea (2025-08-04 → 2025-08-10)
+  { date: "2025-08-03", member_id: "M0001", HRV_ms: 46.6, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 112, steps: 13362 },
+  { date: "2025-08-04", member_id: "M0001", HRV_ms: 44.5, recovery_pct: 49, deep_sleep_min: 81, rem_sleep_min: 96, steps: 8684 },
+  { date: "2025-08-05", member_id: "M0001", HRV_ms: 45.0, recovery_pct: 52, deep_sleep_min: 86, rem_sleep_min: 98, steps: 11489 },
+  { date: "2025-08-06", member_id: "M0001", HRV_ms: 43.4, recovery_pct: 50, deep_sleep_min: 83, rem_sleep_min: 100, steps: 11277 },
+  { date: "2025-08-07", member_id: "M0001", HRV_ms: 45.2, recovery_pct: 52, deep_sleep_min: 88, rem_sleep_min: 104, steps: 11632 },
+  { date: "2025-08-08", member_id: "M0001", HRV_ms: 45.2, recovery_pct: 51, deep_sleep_min: 84, rem_sleep_min: 105, steps: 11352 },
+  { date: "2025-08-09", member_id: "M0001", HRV_ms: 44.1, recovery_pct: 51, deep_sleep_min: 83, rem_sleep_min: 100, steps: 11563 },
+  { date: "2025-08-10", member_id: "M0001", HRV_ms: 44.9, recovery_pct: 51, deep_sleep_min: 84, rem_sleep_min: 105, steps: 6642 },
+  { date: "2025-08-11", member_id: "M0001", HRV_ms: 47.0, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 114, steps: 13546 },
+  { date: "2025-08-12", member_id: "M0001", HRV_ms: 47.3, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 113, steps: 13385 },
+  { date: "2025-08-13", member_id: "M0001", HRV_ms: 46.4, recovery_pct: 56, deep_sleep_min: 90, rem_sleep_min: 112, steps: 13431 },
+  { date: "2025-08-14", member_id: "M0001", HRV_ms: 47.9, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 103, steps: 13037 },
+  { date: "2025-08-15", member_id: "M0001", HRV_ms: 48.0, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 110, steps: 13430 },
+  { date: "2025-08-16", member_id: "M0001", HRV_ms: 47.6, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 114, steps: 13575 },
+  { date: "2025-08-17", member_id: "M0001", HRV_ms: 47.0, recovery_pct: 57, deep_sleep_min: 92, rem_sleep_min: 111, steps: 13472 },
+  { date: "2025-08-18", member_id: "M0001", HRV_ms: 48.1, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 109, steps: 13187 },
+  { date: "2025-08-19", member_id: "M0001", HRV_ms: 48.5, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 111, steps: 13420 },
+  { date: "2025-08-20", member_id: "M0001", HRV_ms: 47.6, recovery_pct: 57, deep_sleep_min: 91, rem_sleep_min: 110, steps: 13418 },
+  { date: "2025-08-21", member_id: "M0001", HRV_ms: 47.0, recovery_pct: 56, deep_sleep_min: 92, rem_sleep_min: 110, steps: 13361 },
+  { date: "2025-08-22", member_id: "M0001", HRV_ms: 47.3, recovery_pct: 56, deep_sleep_min: 90, rem_sleep_min: 112, steps: 13338 },
+  { date: "2025-08-23", member_id: "M0001", HRV_ms: 47.5, recovery_pct: 57, deep_sleep_min: 93, rem_sleep_min: 115, steps: 13498 },
+  { date: "2025-08-24", member_id: "M0001", HRV_ms: 47.0, recovery_pct: 57, deep_sleep_min: 92, rem_sleep_min: 110, steps: 13388 },
+  { date: "2025-08-25", member_id: "M0001", HRV_ms: 47.8, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 112, steps: 13481 },
+  { date: "2025-08-26", member_id: "M0001", HRV_ms: 46.9, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 111, steps: 13541 },
+  { date: "2025-08-27", member_id: "M0001", HRV_ms: 48.0, recovery_pct: 59, deep_sleep_min: 93, rem_sleep_min: 114, steps: 13568 },
+  { date: "2025-08-28", member_id: "M0001", HRV_ms: 46.8, recovery_pct: 56, deep_sleep_min: 90, rem_sleep_min: 111, steps: 13449 },
+  { date: "2025-08-29", member_id: "M0001", HRV_ms: 47.4, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 112, steps: 13443 },
+  { date: "2025-08-30", member_id: "M0001", HRV_ms: 47.9, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 111, steps: 13399 },
+  { date: "2025-08-31", member_id: "M0001", HRV_ms: 47.2, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 111, steps: 13487 },
+  // Travel week: Jakarta, Indonesia (2025-09-01 → 2025-09-07)
+  { date: "2025-09-01", member_id: "M0001", HRV_ms: 45.1, recovery_pct: 50, deep_sleep_min: 85, rem_sleep_min: 100, steps: 8531 },
+  { date: "2025-09-02", member_id: "M0001", HRV_ms: 45.2, recovery_pct: 51, deep_sleep_min: 88, rem_sleep_min: 97, steps: 11661 },
+  { date: "2025-09-03", member_id: "M0001", HRV_ms: 44.3, recovery_pct: 53, deep_sleep_min: 89, rem_sleep_min: 101, steps: 11853 },
+  { date: "2025-09-04", member_id: "M0001", HRV_ms: 44.8, recovery_pct: 51, deep_sleep_min: 86, rem_sleep_min: 98, steps: 11612 },
+  { date: "2025-09-05", member_id: "M0001", HRV_ms: 44.8, recovery_pct: 51, deep_sleep_min: 87, rem_sleep_min: 102, steps: 11948 },
+  { date: "2025-09-06", member_id: "M0001", HRV_ms: 45.7, recovery_pct: 52, deep_sleep_min: 89, rem_sleep_min: 104, steps: 11677 },
+  { date: "2025-09-07", member_id: "M0001", HRV_ms: 45.8, recovery_pct: 52, deep_sleep_min: 90, rem_sleep_min: 109, steps: 6623 },
+  { date: "2025-09-08", member_id: "M0001", HRV_ms: 49.2, recovery_pct: 60, deep_sleep_min: 93, rem_sleep_min: 113, steps: 13435 },
+  { date: "2025-09-09", member_id: "M0001", HRV_ms: 49.7, recovery_pct: 58, deep_sleep_min: 93, rem_sleep_min: 111, steps: 13349 },
+  { date: "2025-09-10", member_id: "M0001", HRV_ms: 50.4, recovery_pct: 60, deep_sleep_min: 93, rem_sleep_min: 114, steps: 13561 },
+  { date: "2025-09-11", member_id: "M0001", HRV_ms: 48.6, recovery_pct: 57, deep_sleep_min: 90, rem_sleep_min: 111, steps: 13246 },
+  { date: "2025-09-12", member_id: "M0001", HRV_ms: 49.8, recovery_pct: 59, deep_sleep_min: 92, rem_sleep_min: 114, steps: 13558 },
+  { date: "2025-09-13", member_id: "M0001", HRV_ms: 49.6, recovery_pct: 60, deep_sleep_min: 93, rem_sleep_min: 113, steps: 13557 },
+  { date: "2025-09-14", member_id: "M0001", HRV_ms: 49.6, recovery_pct: 60, deep_sleep_min: 94, rem_sleep_min: 114, steps: 13576 },
+  { date: "2025-09-15", member_id: "M0001", HRV_ms: 49.2, recovery_pct: 59, deep_sleep_min: 93, rem_sleep_min: 112, steps: 13402 },
+  { date: "2025-09-16", member_id: "M0001", HRV_ms: 49.7, recovery_pct: 59, deep_sleep_min: 92, rem_sleep_min: 114, steps: 13527 },
+  { date: "2025-09-17", member_id: "M0001", HRV_ms: 50.3, recovery_pct: 59, deep_sleep_min: 93, rem_sleep_min: 111, steps: 13409 },
+  { date: "2025-09-18", member_id: "M0001", HRV_ms: 49.2, recovery_pct: 59, deep_sleep_min: 93, rem_sleep_min: 114, steps: 13528 },
+  { date: "2025-09-19", member_id: "M0001", HRV_ms: 48.6, recovery_pct: 57, deep_sleep_min: 91, rem_sleep_min: 110, steps: 13160 },
+  { date: "2025-09-20", member_id: "M0001", HRV_ms: 48.8, recovery_pct: 58, deep_sleep_min: 92, rem_sleep_min: 112, steps: 13403 },
+  { date: "2025-09-21", member_id: "M0001", HRV_ms: 49.4, recovery_pct: 60, deep_sleep_min: 93, rem_sleep_min: 112, steps: 13536 },
+  { date: "2025-09-22", member_id: "M0001", HRV_ms: 49.6, recovery_pct: 59, deep_sleep_min: 93, rem_sleep_min: 112, steps: 13457 },
+  { date: "2025-09-23", member_id: "M0001", HRV_ms: 50.7, recovery_pct: 60, deep_sleep_min: 92, rem_sleep_min: 114, steps: 13514 },
+  { date: "2025-09-24", member_id: "M0001", HRV_ms: 49.4, recovery_pct: 59, deep_sleep_min: 93, rem_sleep_min: 114, steps: 13545 },
+  { date: "2025-09-25", member_id: "M0001", HRV_ms: 51.6, recovery_pct: 60, deep_sleep_min: 93, rem_sleep_min: 114, steps: 13565 },
+  { date: "2025-09-26", member_id: "M0001", HRV_ms: 49.5, recovery_pct: 59, deep_sleep_min: 92, rem_sleep_min: 110, steps: 13186 },
+  { date: "2025-09-27", member_id: "M0001", HRV_ms: 49.6, recovery_pct: 58, deep_sleep_min: 91, rem_sleep_min: 111, steps: 13428 },
+  { date: "2025-09-28", member_id: "M0001", HRV_ms: 50.0, recovery_pct: 59, deep_sleep_min: 92, rem_sleep_min: 110, steps: 13337 },
+  { date: "2025-09-29", member_id: "M0001", HRV_ms: 49.3, recovery_pct: 60, deep_sleep_min: 93, rem_sleep_min: 113, steps: 13501 },
+  { date: "2025-09-30", member_id: "M0001", HRV_ms: 50.0, recovery_pct: 60, deep_sleep_min: 93, rem_sleep_min: 112, steps: 13443 },
 ];
+
 
 
 
@@ -142,221 +400,502 @@ const EMBED = (() => {
       wearables: ["Garmin"]
     },
     episodes: [
-      { episode_id: "E01", title: "Onboarding & Data Consolidation", start_at: "2025-01-15T09:00:00+08:00", end_at: "2025-01-29T09:00:00+08:00", summary: "Kickoff, gather data sources, align goals." },
-      { episode_id: "E02", title: "Initial Plans & Wearable Calibration", start_at: "2025-01-30T09:00:00+08:00", end_at: "2025-02-20T09:00:00+08:00", summary: "Baseline exercise/nutrition; calibrate HRV & sleep." },
-      { episode_id: "E03", title: "Optimization v2.0 & First Wins", start_at: "2025-02-21T09:00:00+08:00", end_at: "2025-03-14T09:00:00+08:00", summary: "Resolve friction, adopt Zone 2 cadence." },
-      { episode_id: "E04", title: "Diagnostics & Course Correction", start_at: "2025-04-10T09:00:00+08:00", end_at: "2025-05-01T09:00:00+08:00", summary: "Quarterly panel + plan adjustments." }
+      { episode_id: "E01", title: "Onboarding & Data Consolidation", start_at: "2025-01-15T09:00:00+08:00", end_at: "2025-01-29T09:00:00+08:00", summary: "Kickoff; import Garmin, health history, meds; align goals and constraints with care team." },
+      { episode_id: "E02", title: "Initial Plans & Wearable Calibration", start_at: "2025-01-30T09:00:00+08:00", end_at: "2025-02-20T09:00:00+08:00", summary: "Baseline Z2 + mobility (Rachel), omega-3 + caffeine cutoff (Carla); calibrate HRV/sleep tracking." },
+      { episode_id: "E03", title: "Optimization v2.0 & First Wins", start_at: "2025-02-21T09:00:00+08:00", end_at: "2025-03-14T09:00:00+08:00", summary: "Resolve friction; morning training on non-travel days; first adherence coaching; London travel prep." },
+      { episode_id: "E04", title: "Travel Adaptations & Sleep Hygiene", start_at: "2025-03-14T09:00:00+08:00", end_at: "2025-04-09T09:00:00+08:00", summary: "NY trip handling; jet-lag plan; wind-down routine; swap Z2↔mobility on red recovery days (Ruby/Advik)." },
+      { episode_id: "E05", title: "Diagnostics & Course Correction", start_at: "2025-04-10T09:00:00+08:00", end_at: "2025-05-01T09:00:00+08:00", summary: "Quarterly panel review (D01); Seoul travel-proof Z2; tweak nutrition; confirm LDL/ApoB trend (Dr. Warren/Carla)." },
+      { episode_id: "E06", title: "Progressive Load & Nutrition Iteration", start_at: "2025-05-01T09:00:00+08:00", end_at: "2025-05-31T09:00:00+08:00", summary: "Jakarta trip; step goals + protein scaffolding; losartan trial follow-through; end-May follow-up lab." },
+      { episode_id: "E07", title: "Autonomic Resilience & Morning Blocks", start_at: "2025-05-31T09:00:00+08:00", end_at: "2025-06-30T09:00:00+08:00", summary: "London travel #2; reinforce AM training habit; breathwork on low-recovery; reduce HRV dips during travel." },
+      { episode_id: "E08", title: "Mid-Year Diagnostics & Plan Refresh", start_at: "2025-06-30T09:00:00+08:00", end_at: "2025-07-21T09:00:00+08:00", summary: "NY trip; mid-year panel (D02); review lipids/inflammation; refine exercise split and caffeine window." },
+      { episode_id: "E09", title: "Travel-Proofing v2 & Jet-Lag Mitigation", start_at: "2025-07-21T09:00:00+08:00", end_at: "2025-08-11T09:00:00+08:00", summary: "Seoul trip; heat/humidity strategy; RPE caps; maintain Z2 volume with hotel/streets circuits (Advik)." },
+      { episode_id: "E10", title: "Strength-Endurance Blend & Recovery Focus", start_at: "2025-08-11T09:00:00+08:00", end_at: "2025-09-01T09:00:00+08:00", summary: "Add light strength to Z2 base; protect sleep consistency; iterate macros to support training weeks." },
+      { episode_id: "E11", title: "Maintenance & Recheck Prep", start_at: "2025-09-01T09:00:00+08:00", end_at: "2025-09-22T09:00:00+08:00", summary: "Jakarta travel; stabilize routine; line up end-of-quarter labs; confirm adherence levers with concierge." },
+      { episode_id: "E12", title: "Wrap-Up & Handover Planning", start_at: "2025-09-22T09:00:00+08:00", end_at: "2025-09-30T09:00:00+08:00", summary: "Summarize 8-month outcomes; finalize next-quarter targets; schedule October panel & follow-ups." }
     ],
+
     trips: [
       { member_id: "M0001", trip_id: "T01", location: "London, UK", start_at: "2025-02-03T08:00:00+08:00", end_at: "2025-02-10T08:00:00+08:00" },
       { member_id: "M0001", trip_id: "T02", location: "New York, USA", start_at: "2025-03-03T08:00:00+08:00", end_at: "2025-03-10T08:00:00+08:00" },
-      { member_id: "M0001", trip_id: "T03", location: "Seoul, South Korea", start_at: "2025-04-07T08:00:00+08:00", end_at: "2025-04-14T08:00:00+08:00" }
-    ],
-    diagnostics: [
-      // Anchors for LDL/hsCRP and to tie decisions to outcomes
-      { member_id: "M0001", diagnostic_id: "D00", date: "2025-02-12", ApoB: 112, LDL_C: 132, HDL_C: 48, TG: 160, hsCRP: 2.1, Notes: "Baseline prior to plan" },
-      { member_id: "M0001", diagnostic_id: "D01", date: "2025-04-15", ApoB: 99, LDL_C: 118, HDL_C: 50, TG: 145, hsCRP: 1.8, Notes: "Quarterly review panel" },
-      { member_id: "M0001", diagnostic_id: "D03", date: "2025-05-30", ApoB: 94, LDL_C: 112, HDL_C: 51, TG: 138, hsCRP: 1.6, Notes: "Post-plan follow-up" },
-      { member_id: "M0001", diagnostic_id: "D02", date: "2025-07-14", ApoB: 90, LDL_C: 106, HDL_C: 53, TG: 128, hsCRP: 1.4, Notes: "Quarterly review panel" }
+      { member_id: "M0001", trip_id: "T03", location: "Seoul, South Korea", start_at: "2025-04-07T08:00:00+08:00", end_at: "2025-04-14T08:00:00+08:00" },
+      { member_id: "M0001", trip_id: "T04", location: "Jakarta, Indonesia", start_at: "2025-05-05T08:00:00+08:00", end_at: "2025-05-12T08:00:00+08:00" },
+      { member_id: "M0001", trip_id: "T05", location: "London, UK", start_at: "2025-06-02T08:00:00+08:00", end_at: "2025-06-09T08:00:00+08:00" },
+      { member_id: "M0001", trip_id: "T06", location: "New York, USA", start_at: "2025-07-07T08:00:00+08:00", end_at: "2025-07-14T08:00:00+08:00" },
+      { member_id: "M0001", trip_id: "T07", location: "Seoul, South Korea", start_at: "2025-08-04T08:00:00+08:00", end_at: "2025-08-11T08:00:00+08:00" },
+      { member_id: "M0001", trip_id: "T08", location: "Jakarta, Indonesia", start_at: "2025-09-01T08:00:00+08:00", end_at: "2025-09-08T08:00:00+08:00" }
     ],
 
+    // ===== DIAGNOSTICS: full panels ~every 3 months =====
+    diagnostics: [
+      { member_id: "M0001", diagnostic_id: "D00", date: "2025-02-12", ApoB: 112, LDL_C: 132, HDL_C: 48, TG: 160, hsCRP: 2.1, Notes: "Baseline prior to plan" },
+      { member_id: "M0001", diagnostic_id: "D01", date: "2025-04-15", ApoB: 99, LDL_C: 118, HDL_C: 50, TG: 145, hsCRP: 1.8, Notes: "Quarterly review panel after initial exercise + omega-3 + caffeine cutoff" },
+      { member_id: "M0001", diagnostic_id: "D02", date: "2025-07-14", ApoB: 90, LDL_C: 106, HDL_C: 53, TG: 128, hsCRP: 1.4, Notes: "Quarterly review panel; additive effect of diet iteration + steps + dosage tweak" },
+      { member_id: "M0001", diagnostic_id: "D03", date: "2025-09-29", ApoB: 86, LDL_C: 101, HDL_C: 54, TG: 124, hsCRP: 1.3, Notes: "Quarterly review panel; maintenance + alcohol moderation + sleep consistency" }
+    ],
+
+    // ===== INTERVENTIONS: 2-week cadence, linked to metrics & labs =====
     interventions: [
+      // ————— FEB (onboarding tail + first month) —————
       {
         member_id: "M0001", intervention_id: "I0001", type: "Exercise",
         title: "Zone 2 + Mobility Block (kickoff)",
         start_at: "2025-01-30", end_at: "2025-02-12", adherence: "inconsistent", status: "completed",
         owner: "Rachel (Physiotherapist)",
-        expected: { note: "Improve autonomic tone", metrics: { HRV_ms: { delta: "+4 to +6", window: "14d" } } },
-        actual: { metrics: { HRV_ms: { before: 41.5, after: 45.3, delta: +3.8, window: "14d" } }, note: "Partially achieved; inconsistent adherence early." }
+        expected: { note: "Improve autonomic tone; build base", metrics: { HRV_ms: { delta: "+4 to +6", window: "14d" } } },
+        actual: { metrics: { HRV_ms: { before: 41.5, after: 45.3, delta: +3.8, window: "14d" } }, note: "Partially achieved; needed cadence tweaks on travel prep." }
       },
       {
         member_id: "M0001", intervention_id: "I0002", type: "Nutrition",
         title: "Omega-3 (TG form) + caffeine cutoff 2PM",
         start_at: "2025-02-01", end_at: "2025-02-28", adherence: "good", status: "completed",
         owner: "Carla (Nutritionist)",
-        expected: { note: "Lower LDL-C 5-10 mg/dL in ~6 weeks", metrics: { LDL_C: { delta: "−8", window: "6w" } } },
-        actual: { metrics: { LDL_C: { before: 132, after: 118, delta: -14, window: "D00→D01" } }, note: "Better than expected; dietary compliance high." }
+        expected: { note: "Lower LDL-C 5–10 mg/dL in ~6 weeks; support sleep", metrics: { LDL_C: { delta: "−8", window: "D00→D01" } } },
+        actual: { metrics: { LDL_C: { before: 132, after: 118, delta: -14, window: "D00→D01" } }, note: "Better than expected; caffeine cutoff improved sleep latency." }
+      },
+      {
+        member_id: "M0001", intervention_id: "I0003", type: "Sleep",
+        title: "Sleep hygiene + evening light protocol",
+        start_at: "2025-02-10", end_at: "2025-02-24", adherence: "moderate", status: "completed",
+        owner: "Ruby (Concierge) & Rachel (Physiotherapist)",
+        expected: { note: "Stabilize recovery; reduce late-night arousal", metrics: { HRV_ms: { delta: "+2", window: "14d" }, recovery_pct: { delta: "+2", window: "14d" } } },
+        actual: { metrics: { HRV_ms: { before: 40.2, after: 42.6, delta: +2.4, window: "14d" }, recovery_pct: { before: 49, after: 51, delta: +2, window: "14d" } }, note: "Wins on non-dinner nights; travel still disruptive." }
+      },
+      {
+        member_id: "M0001", intervention_id: "I0004", type: "Exercise",
+        title: "London travel micro-plan (walk Z2 + hotel mobility)",
+        start_at: "2025-02-03", end_at: "2025-02-10", adherence: "moderate", status: "completed",
+        owner: "Advik (Performance Scientist)",
+        expected: { note: "Maintain HRV during travel; cap RPE at 6", metrics: { HRV_ms: { delta: "≈0", window: "travel week" } } },
+        actual: { metrics: { HRV_ms: { before: 42.0, after: 41.2, delta: -0.8, window: "travel week" } }, note: "Jet-lag dip contained vs. prior trips; mobility used 3/5 days." }
+      },
+
+      // ————— MAR (NY trip + early tuning) —————
+      {
+        member_id: "M0001", intervention_id: "I0006", type: "Sleep",
+        title: "NY jet-lag plan (AM light, meal timing, melatonin micro-dose)",
+        start_at: "2025-03-01", end_at: "2025-03-14", adherence: "moderate", status: "completed",
+        owner: "Ruby (Concierge) & Advik (Performance Scientist)",
+        expected: { note: "Improve deep sleep on east-coast time", metrics: { deep_sleep_min: { delta: "+8–12", window: "14d" } } },
+        actual: { metrics: { deep_sleep_min: { before: 74, after: 82, delta: +8, window: "14d" } }, note: "2 nights late dinners blunted effect; otherwise good." }
+      },
+      {
+        member_id: "M0001", intervention_id: "I0007", type: "Exercise",
+        title: "Mobility + breathwork block (post-trip)",
+        start_at: "2025-03-15", end_at: "2025-03-29", adherence: "moderate", status: "completed",
+        owner: "Rachel (Physiotherapist)",
+        expected: { note: "Restore parasympathetic tone post-travel", metrics: { HRV_ms: { delta: "+2", window: "14d" } } },
+        actual: { metrics: { HRV_ms: { before: 43.0, after: 44.6, delta: +1.6, window: "14d" } }, note: "Missed 2 sessions during client week; still trended up." }
       },
       {
         member_id: "M0001", intervention_id: "I0005", type: "Medication",
-        title: "Low-dose ARB trial (losartan 25mg)",
+        title: "Low-dose ARB trial (losartan 25mg nightly)",
         start_at: "2025-03-20", end_at: "2025-04-10", adherence: "good", status: "completed",
         owner: "Dr. Warren (Physician)",
-        expected: { note: "Reduce orthostatic symptoms; modest recovery↑", metrics: { recovery_pct: { delta: "+4 to +6", window: "3w" } } },
-        actual: { metrics: { recovery_pct: { before: 48, after: 54, delta: +6, window: "trial" } }, note: "Orthostatic episodes ↓ and sleep more consolidated." }
+        expected: { note: "Reduce orthostatic symptoms; modest recovery ↑", metrics: { recovery_pct: { delta: "+4 to +6", window: "3w" } } },
+        actual: { metrics: { recovery_pct: { before: 48, after: 54, delta: +6, window: "trial" } }, note: "Orthostatic episodes ↓; sleep consolidation improved." }
       },
+
+      // ————— APR (Seoul travel + diagnostics) —————
       {
         member_id: "M0001", intervention_id: "I0008", type: "Exercise",
-        title: "Zone 2 + Mobility (travel-proof)",
+        title: "Zone 2 + Mobility (travel-proof, Seoul)",
         start_at: "2025-04-10", end_at: "2025-04-23", adherence: "good", status: "completed",
         owner: "Advik (Performance Scientist)",
-        expected: { note: "Maintain HRV during travel; reduce dips", metrics: { HRV_ms: { delta: "+2", window: "2w" } } },
-        actual: { metrics: { HRV_ms: { before: 44.1, after: 46.0, delta: +1.9, window: "2w" } }, note: "Travel dips smaller vs. February trip." }
+        expected: { note: "Contain HRV dips while abroad", metrics: { HRV_ms: { delta: "+2", window: "2w" } } },
+        actual: { metrics: { HRV_ms: { before: 44.1, after: 46.0, delta: +1.9, window: "2w" } }, note: "Recovery variability smaller than Feb/Mar trips." }
+      },
+
+      // ————— MAY (iteration blocks) —————
+      {
+        member_id: "M0001", intervention_id: "I0009", type: "Nutrition",
+        title: "Fiber 30g/day + plant sterols; alcohol ≤2/wk",
+        start_at: "2025-04-20", end_at: "2025-05-04", adherence: "good", status: "completed",
+        owner: "Carla (Nutritionist)",
+        expected: { note: "Help LDL and TG ahead of Q2 labs", metrics: { LDL_C: { delta: "−4 to −6", window: "D01→D02" }, TG: { delta: "−8 to −12", window: "D01→D02" } } },
+        actual: { metrics: { LDL_C: { before: 118, after: 112, delta: -6, window: "D01→D02 (partial)" }, TG: { before: 145, after: 136, delta: -9, window: "4w" } }, note: "Sustainable; minor slips on client dinners." }
+      },
+      {
+        member_id: "M0001", intervention_id: "I0010", type: "Exercise",
+        title: "Steps 10–12k + desk breaks (NEAT boost)",
+        start_at: "2025-05-05", end_at: "2025-05-18", adherence: "good", status: "completed",
+        owner: "Advik (Performance Scientist)",
+        expected: { note: "Energy balance and glucose handling", metrics: { steps: { delta: "+2000/day", window: "14d" }, recovery_pct: { delta: "+2", window: "14d" } } },
+        actual: { metrics: { steps: { before: 9200, after: 11200, delta: +2000, window: "14d" }, recovery_pct: { before: 53, after: 55, delta: +2, window: "14d" } }, note: "Standing calls helped; travel days still lower." }
+      },
+      {
+        member_id: "M0001", intervention_id: "I0011", type: "Exercise",
+        title: "Strength-endurance blend (intro)",
+        start_at: "2025-05-19", end_at: "2025-06-02", adherence: "moderate", status: "completed",
+        owner: "Rachel (Physiotherapist)",
+        expected: { note: "Add 2× light strength without HRV dips", metrics: { HRV_ms: { delta: "≈0 to +1", window: "14d" }, recovery_pct: { delta: "+1–2", window: "14d" } } },
+        actual: { metrics: { HRV_ms: { before: 47.0, after: 47.5, delta: +0.5, window: "14d" }, recovery_pct: { before: 55, after: 56, delta: +1, window: "14d" } }, note: "Kept RPE ≤7; one session skipped on travel prep." }
+      },
+
+      // ————— JUN (diet tweak + sleep window) —————
+      {
+        member_id: "M0001", intervention_id: "I0012", type: "Nutrition",
+        title: "Omega-3 dose adjust + 5% sat-fat swap",
+        start_at: "2025-06-03", end_at: "2025-06-16", adherence: "good", status: "completed",
+        owner: "Carla (Nutritionist)",
+        expected: { note: "Push LDL another 4–6 mg/dL by Q2 labs", metrics: { LDL_C: { delta: "−4 to −6", window: "D01→D02" } } },
+        actual: { metrics: { LDL_C: { before: 112, after: 106, delta: -6, window: "D01→D02 (additive)" } }, note: "Worked well with travel snack plan." }
+      },
+      {
+        member_id: "M0001", intervention_id: "I0013", type: "Sleep",
+        title: "Caffeine window enforcement (AM-only) + wind-down",
+        start_at: "2025-06-17", end_at: "2025-06-30", adherence: "moderate", status: "completed",
+        owner: "Ruby (Concierge)",
+        expected: { note: "Sleep efficiency ↑; HRV small uptick", metrics: { HRV_ms: { delta: "+1", window: "14d" }, deep_sleep_min: { delta: "+6", window: "14d" } } },
+        actual: { metrics: { HRV_ms: { before: 46.8, after: 47.7, delta: +0.9, window: "14d" }, deep_sleep_min: { before: 82, after: 88, delta: +6, window: "14d" } }, note: "Two afternoons broke the rule; still net positive." }
+      },
+
+      // ————— JUL (heat/hydration + Q2 labs) —————
+      {
+        member_id: "M0001", intervention_id: "I0014", type: "Lifestyle",
+        title: "Heat & hydration protocol for POTS (electrolytes, pre-cooling)",
+        start_at: "2025-07-01", end_at: "2025-07-21", adherence: "good", status: "completed",
+        owner: "Dr. Warren (Physician) & Ruby (Concierge)",
+        expected: { note: "Reduce orthostatic episodes; support training in humidity", metrics: { recovery_pct: { delta: "+3", window: "3w" } } },
+        actual: { metrics: { recovery_pct: { before: 52, after: 55, delta: +3, window: "3w" } }, note: "Notable improvement during hot days; fewer AM head-rushes." }
+      },
+
+      // ————— AUG (alcohol, Seoul trip, sleep consistency) —————
+      {
+        member_id: "M0001", intervention_id: "I0015", type: "Nutrition",
+        title: "Alcohol moderation (≤2 drinks/week cap)",
+        start_at: "2025-07-22", end_at: "2025-08-05", adherence: "moderate", status: "completed",
+        owner: "Carla (Nutritionist)",
+        expected: { note: "Lower inflammation; support sleep", metrics: { hsCRP: { delta: "−0.1 to −0.2", window: "to D03" } } },
+        actual: { metrics: { hsCRP: { before: 1.4, after: 1.3, delta: -0.1, window: "D02→D03 (trend)" } }, note: "Client events increased variance; overall reduction." }
+      },
+      {
+        member_id: "M0001", intervention_id: "I0016", type: "Sleep",
+        title: "Seoul jet-lag mitigation v2 (earlier light, earlier dinner)",
+        start_at: "2025-08-06", end_at: "2025-08-19", adherence: "good", status: "completed",
+        owner: "Ruby (Concierge) & Advik (Performance Scientist)",
+        expected: { note: "Deep sleep preservation on trip", metrics: { deep_sleep_min: { delta: "+6", window: "14d" }, HRV_ms: { delta: "≈0 to +1", window: "14d" } } },
+        actual: { metrics: { deep_sleep_min: { before: 80, after: 87, delta: +7, window: "14d" }, HRV_ms: { before: 46.0, after: 46.8, delta: +0.8, window: "14d" } }, note: "Hotel gym limited; walking Z2 maintained volume." }
+      },
+      {
+        member_id: "M0001", intervention_id: "I0017", type: "Sleep",
+        title: "Sleep consistency challenge (same bedtime ±15m)",
+        start_at: "2025-08-20", end_at: "2025-09-02", adherence: "good", status: "completed",
+        owner: "Ruby (Concierge)",
+        expected: { note: "REM/Deep balance; morning readiness", metrics: { rem_sleep_min: { delta: "+6–10", window: "14d" }, recovery_pct: { delta: "+2", window: "14d" } } },
+        actual: { metrics: { rem_sleep_min: { before: 103, after: 112, delta: +9, window: "14d" }, recovery_pct: { before: 54, after: 56, delta: +2, window: "14d" } }, note: "Calendar holds helped; one late client dinner." }
+      },
+
+      // ————— SEP (maintenance into Q3 labs) —————
+      {
+        member_id: "M0001", intervention_id: "I0018", type: "Exercise",
+        title: "Maintenance & taper into labs (RPE caps, recovery swaps)",
+        start_at: "2025-09-03", end_at: "2025-09-16", adherence: "good", status: "completed",
+        owner: "Advik (Performance Scientist) & Rachel (Physiotherapist)",
+        expected: { note: "Avoid pre-lab fatigue; hold gains", metrics: { HRV_ms: { delta: "≈0", window: "2w" }, recovery_pct: { delta: "≈0 to +1", window: "2w" } } },
+        actual: { metrics: { HRV_ms: { before: 47.5, after: 47.8, delta: +0.3, window: "2w" }, recovery_pct: { before: 55, after: 56, delta: +1, window: "2w" } }, note: "Stayed within caps; no red days before draw." }
       }
     ],
+
     "chat": [
-      // Rachel ↔ Rohan (Physio)
-      { "message_id": "R001", "timestamp": "2025-01-29T09:10:00+08:00", "sender_id": "U_Rachel", "sender": "Rachel", "sender_role": "physio", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Kickoff cardio plan", "text": "Morning Rohan — how are Zone 2 sessions feeling so far?" },
-      { "message_id": "R002", "timestamp": "2025-01-29T09:12:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Rachel", "receiver": "Rachel", "receiver_role": "physio", "topic": "Kickoff cardio plan", "text": "A bit tough early; HR spikes sometimes." },
-      { "message_id": "R003", "timestamp": "2025-01-29T09:14:00+08:00", "sender_id": "U_Rachel", "sender": "Rachel", "sender_role": "physio", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Kickoff cardio plan", "text": "Let’s slow cadence and add a 5‑min warmup." },
-      { "message_id": "R004", "timestamp": "2025-01-29T09:16:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Rachel", "receiver": "Rachel", "receiver_role": "physio", "topic": "Kickoff cardio plan", "text": "Got it, will try that this evening." },
-      { "message_id": "R005", "timestamp": "2025-01-29T09:18:00+08:00", "sender_id": "U_Rachel", "sender": "Rachel", "sender_role": "physio", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Kickoff cardio plan", "text": "Please add rib‑cage‑down cue and 2×30s decompressions." },
-      { "message_id": "R006", "timestamp": "2025-01-29T09:21:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Rachel", "receiver": "Rachel", "receiver_role": "physio", "topic": "Kickoff cardio plan", "text": "Cue helps posture; decompressions feel good." },
-      { "message_id": "R007", "timestamp": "2025-01-29T09:25:00+08:00", "sender_id": "U_Rachel", "sender": "Rachel", "sender_role": "physio", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Kickoff cardio plan", "text": "Great — keep 3×/week; share RPE after each." },
-      { "message_id": "R008", "timestamp": "2025-01-29T09:27:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Rachel", "receiver": "Rachel", "receiver_role": "physio", "topic": "Kickoff cardio plan", "text": "Will log RPE 5–6 most days." },
-      { "message_id": "R009", "timestamp": "2025-01-29T09:30:00+08:00", "sender_id": "U_Rachel", "sender": "Rachel", "sender_role": "physio", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Kickoff cardio plan", "text": "If recovery is <50%, do mobility only." },
-      { "message_id": "R010", "timestamp": "2025-01-29T09:32:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Rachel", "receiver": "Rachel", "receiver_role": "physio", "topic": "Kickoff cardio plan", "text": "Understood." },
+      // =========================
+      // FEBRUARY 2025 (Onboarding tail + first plans, London trip, Baseline D00)
+      // =========================
 
-      // Carla ↔ Rohan (Nutrition)
-      { "message_id": "C001", "timestamp": "2025-02-03T10:00:00+08:00", "sender_id": "U_Carla", "sender": "Carla", "sender_role": "nutrition", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Omega‑3 + caffeine cutoff", "text": "Add 2g EPA+DHA; cutoff caffeine at 2pm to help sleep/HRV." },
-      { "message_id": "C002", "timestamp": "2025-02-03T10:02:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Carla", "receiver": "Carla", "receiver_role": "nutrition", "topic": "Omega‑3 + caffeine cutoff", "text": "Starting today — any brand you recommend?" },
-      { "message_id": "C003", "timestamp": "2025-02-03T10:04:00+08:00", "sender_id": "U_Carla", "sender": "Carla", "sender_role": "nutrition", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Omega‑3 + caffeine cutoff", "text": "TG form with meals; Nordic Naturals or Carlson are fine." },
-      { "message_id": "C004", "timestamp": "2025-02-03T10:07:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Carla", "receiver": "Carla", "receiver_role": "nutrition", "topic": "Omega‑3 + caffeine cutoff", "text": "Ordered; I’ll track LDL in the next panel." },
-      { "message_id": "C005", "timestamp": "2025-02-03T10:12:00+08:00", "sender_id": "U_Carla", "sender": "Carla", "sender_role": "nutrition", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Nutrition plan", "text": "Aim protein 120g/day; bump fiber to ~30g." },
-      { "message_id": "C006", "timestamp": "2025-02-03T10:14:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Carla", "receiver": "Carla", "receiver_role": "nutrition", "topic": "Nutrition plan", "text": "Protein may be tight on travel days — I’ll prep." },
-      { "message_id": "C007", "timestamp": "2025-02-03T10:17:00+08:00", "sender_id": "U_Carla", "sender": "Carla", "sender_role": "nutrition", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Nutrition plan", "text": "Travel pack: tins of fish + protein sachets." },
-      { "message_id": "C008", "timestamp": "2025-02-03T10:19:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Carla", "receiver": "Carla", "receiver_role": "nutrition", "topic": "Nutrition plan", "text": "Perfect — I’ll pack for London." },
-      { "message_id": "C009", "timestamp": "2025-02-03T10:22:00+08:00", "sender_id": "U_Carla", "sender": "Carla", "sender_role": "nutrition", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Nutrition plan", "text": "Share food pics for 3 days; I’ll review." },
-      { "message_id": "C010", "timestamp": "2025-02-03T10:30:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Carla", "receiver": "Carla", "receiver_role": "nutrition", "topic": "Nutrition plan", "text": "Will do." },
+      // I0002 (Omega-3 + caffeine cutoff)
+      { message_id: "C101", timestamp: "2025-02-01T09:05:00+08:00", sender_id: "U_Carla", sender: "Carla", sender_role: "nutrition", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0002 • Omega-3 + caffeine cutoff", text: "Let’s start 2g EPA+DHA daily and stop caffeine after 2pm. Goal is LDL-C ↓ and better sleep." },
+      { message_id: "C102", timestamp: "2025-02-01T09:08:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Carla", receiver: "Carla", receiver_role: "nutrition", topic: "I0002 • Omega-3 + caffeine cutoff", text: "On it. Any preferred brand and should I take it with meals?" },
+      { message_id: "C103", timestamp: "2025-02-01T09:12:00+08:00", sender_id: "U_Carla", sender: "Carla", sender_role: "nutrition", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0002 • Omega-3 + caffeine cutoff", text: "TG form (Nordic/Carlson) with a main meal. I’ll monitor sleep + LDL for the April panel." },
 
-      // Dr. Warren ↔ Rohan (Physician)
-      { "message_id": "W001", "timestamp": "2025-03-20T08:40:00+08:00", "sender_id": "U_Warren", "sender": "Dr. Warren", "sender_role": "physician", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Losartan trial", "text": "BP logs show morning spikes; consider losartan 25mg nightly." },
-      { "message_id": "W002", "timestamp": "2025-03-20T08:42:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Warren", "receiver": "Dr. Warren", "receiver_role": "physician", "topic": "Losartan trial", "text": "Open to trial — any side effects to watch?" },
-      { "message_id": "W003", "timestamp": "2025-03-20T08:44:00+08:00", "sender_id": "U_Warren", "sender": "Dr. Warren", "sender_role": "physician", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Losartan trial", "text": "Dizziness; hydrate; monitor orthostatic symptoms." },
-      { "message_id": "W004", "timestamp": "2025-03-20T08:46:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Warren", "receiver": "Dr. Warren", "receiver_role": "physician", "topic": "Losartan trial", "text": "I’ll take nightly and log symptoms daily." },
-      { "message_id": "W005", "timestamp": "2025-03-20T08:55:00+08:00", "sender_id": "U_Warren", "sender": "Dr. Warren", "sender_role": "physician", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Losartan trial", "text": "Great; recheck BMP in 10–14 days." },
-      { "message_id": "W006", "timestamp": "2025-03-24T09:10:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Warren", "receiver": "Dr. Warren", "receiver_role": "physician", "topic": "Losartan trial", "text": "Day 4: fewer head rushes; sleep better." },
-      { "message_id": "W007", "timestamp": "2025-03-24T09:12:00+08:00", "sender_id": "U_Warren", "sender": "Dr. Warren", "sender_role": "physician", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Losartan trial", "text": "Good sign; keep dose; avoid NSAIDs." },
-      { "message_id": "W008", "timestamp": "2025-03-24T09:20:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Warren", "receiver": "Dr. Warren", "receiver_role": "physician", "topic": "Losartan trial", "text": "Noted." },
-      { "message_id": "W009", "timestamp": "2025-03-24T09:26:00+08:00", "sender_id": "U_Warren", "sender": "Dr. Warren", "sender_role": "physician", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Losartan trial", "text": "If standing SBP <100 consistently, message me." },
-      { "message_id": "W010", "timestamp": "2025-03-24T09:30:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Warren", "receiver": "Dr. Warren", "receiver_role": "physician", "topic": "Losartan trial", "text": "Will do." },
-      // Diagnostics (D01) ↔ Rohan
-      {
-        message_id: "D001",
-        timestamp: "2025-04-15T10:00:00+08:00",
-        sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician",
-        receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member",
-        topic: "Diagnostics results",
-        text: "Panel shows LDL-C 118 (down from 132), ApoB 99, hsCRP 1.8."
-      },
-      {
-        message_id: "D002",
-        timestamp: "2025-04-15T10:04:00+08:00",
-        sender_id: "M0001", sender: "Rohan Patel", sender_role: "member",
-        receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician",
-        topic: "Diagnostics results",
-        text: "Great — that’s reassuring. Let’s keep the nutrition plan."
-      },
+      // I0001 (Zone 2 + Mobility kickoff — carries over, still in play)
+      { message_id: "R101", timestamp: "2025-02-01T18:00:00+08:00", sender_id: "U_Rachel", sender: "Rachel", sender_role: "physio", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0001 • Zone 2 + mobility kickoff", text: "How did the first two Z2 sessions feel? Keep RPE 5–6 and add 5-min warmup." },
+      { message_id: "R102", timestamp: "2025-02-01T18:03:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Rachel", receiver: "Rachel", receiver_role: "physio", topic: "I0001 • Zone 2 + mobility kickoff", text: "Good, but HR spikes at the start. Warmup should help. Will try tonight." },
 
+      // I0004 (London travel micro-plan)
+      { message_id: "A101", timestamp: "2025-02-02T16:10:00+08:00", sender_id: "U_Advik", sender: "Advik", sender_role: "performance", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0004 • London travel micro-plan", text: "For London: brisk walks for 25–30 min (Z2), bodyweight circuit if the gym is busy. Cap RPE at 6." },
+      { message_id: "A102", timestamp: "2025-02-02T16:12:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Advik", receiver: "Advik", receiver_role: "performance", topic: "I0004 • London travel micro-plan", text: "Noted. I’ll share Garmin export on return." },
 
+      // I0003 (Sleep hygiene + evening light)
+      { message_id: "RB101", timestamp: "2025-02-10T21:05:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0003 • Sleep hygiene block", text: "Starting tonight: 9:30pm wind-down, warm light only, and phone to charge outside the bedroom." },
+      { message_id: "RB102", timestamp: "2025-02-10T21:06:30+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Ruby", receiver: "Ruby", receiver_role: "concierge", topic: "I0003 • Sleep hygiene block", text: "Will try — late dinners this week though." },
+      { message_id: "R103", timestamp: "2025-02-11T07:45:00+08:00", sender_id: "U_Rachel", sender: "Rachel", sender_role: "physio", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0003 • Sleep hygiene block", text: "Add 2×30s decompressions and nasal breathing before bed to drop arousal." },
 
-      // Advik ↔ Rohan (Performance)
-      { "message_id": "A001", "timestamp": "2025-04-09T20:05:00+08:00", "sender_id": "U_Advik", "sender": "Advik", "sender_role": "performance", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Travel‑proof Z2", "text": "We’ll structure Z2 around flights; mobility on low‑recovery days." },
-      { "message_id": "A002", "timestamp": "2025-04-09T20:07:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Advik", "receiver": "Advik", "receiver_role": "performance", "topic": "Travel‑proof Z2", "text": "Flying Monday; hotel gym uncertain." },
-      { "message_id": "A003", "timestamp": "2025-04-09T20:09:00+08:00", "sender_id": "U_Advik", "sender": "Advik", "sender_role": "performance", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Travel‑proof Z2", "text": "Use bodyweight circuit; 25 min Z2 via brisk walk." },
-      { "message_id": "A004", "timestamp": "2025-04-09T20:12:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Advik", "receiver": "Advik", "receiver_role": "performance", "topic": "Travel‑proof Z2", "text": "Walks near hotel doable." },
-      { "message_id": "A005", "timestamp": "2025-04-09T20:16:00+08:00", "sender_id": "U_Advik", "sender": "Advik", "sender_role": "performance", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Travel‑proof Z2", "text": "Use HR strap; cap RPE at 6 during travel." },
-      { "message_id": "A006", "timestamp": "2025-04-09T20:18:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Advik", "receiver": "Advik", "receiver_role": "performance", "topic": "Travel‑proof Z2", "text": "Copy." },
-      { "message_id": "A007", "timestamp": "2025-04-09T20:25:00+08:00", "sender_id": "U_Advik", "sender": "Advik", "sender_role": "performance", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Travel‑proof Z2", "text": "Send Garmin export after the week." },
-      { "message_id": "A008", "timestamp": "2025-04-09T20:27:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Advik", "receiver": "Advik", "receiver_role": "performance", "topic": "Travel‑proof Z2", "text": "Will export Friday." },
-      { "message_id": "A009", "timestamp": "2025-04-09T20:40:00+08:00", "sender_id": "U_Advik", "sender": "Advik", "sender_role": "performance", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Travel‑proof Z2", "text": "If red recovery, swap to breathwork + mobility." },
-      { "message_id": "A010", "timestamp": "2025-04-09T20:45:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Advik", "receiver": "Advik", "receiver_role": "performance", "topic": "Travel‑proof Z2", "text": "Sounds good." },
+      // D00 (Baseline diagnostics drawn & reviewed)
+      { message_id: "RB103", timestamp: "2025-02-11T11:00:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "D00 • Phlebotomy logistics", text: "Phlebotomy 12 Feb 8:30am at Parkway Lab, confirmation sent." },
+      { message_id: "D101", timestamp: "2025-02-13T10:15:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "D00 • Results", text: "Baseline: LDL-C 132, ApoB 112, hs-CRP 2.1. Not alarming, but we’ll push diet + sleep first." },
+      { message_id: "D102", timestamp: "2025-02-13T10:19:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician", topic: "D00 • Results", text: "Understood. I’ll stay consistent on omega-3 and caffeine cutoff." },
 
-      // Ruby ↔ Rohan (Concierge)
-      { "message_id": "RB001", "timestamp": "2025-02-15T11:00:00+08:00", "sender_id": "U_Ruby", "sender": "Ruby", "sender_role": "concierge", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Logistics", "text": "Booked physio slots Tue/Thu 7pm; calendar invites sent." },
-      { "message_id": "RB002", "timestamp": "2025-02-15T11:02:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Ruby", "receiver": "Ruby", "receiver_role": "concierge", "topic": "Logistics", "text": "Received, thanks." },
-      { "message_id": "RB003", "timestamp": "2025-02-15T11:10:00+08:00", "sender_id": "U_Ruby", "sender": "Ruby", "sender_role": "concierge", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Travel", "text": "Need lounge access in NY next week?" },
-      { "message_id": "RB004", "timestamp": "2025-02-15T11:12:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Ruby", "receiver": "Ruby", "receiver_role": "concierge", "topic": "Travel", "text": "Yes, Terminal 4 if possible." },
-      { "message_id": "RB005", "timestamp": "2025-02-15T11:20:00+08:00", "sender_id": "U_Ruby", "sender": "Ruby", "sender_role": "concierge", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Travel", "text": "Done; also arranging a quiet hotel room." },
-      { "message_id": "RB006", "timestamp": "2025-02-15T11:25:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Ruby", "receiver": "Ruby", "receiver_role": "concierge", "topic": "Logistics", "text": "Much appreciated." },
-      { "message_id": "RB007", "timestamp": "2025-02-15T11:30:00+08:00", "sender_id": "U_Ruby", "sender": "Ruby", "sender_role": "concierge", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Sleep", "text": "Daily reminder set for 9:30pm wind‑down." },
-      { "message_id": "RB008", "timestamp": "2025-02-15T11:33:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Ruby", "receiver": "Ruby", "receiver_role": "concierge", "topic": "Sleep", "text": "Good addition." },
-      { "message_id": "RB009", "timestamp": "2025-02-15T11:36:00+08:00", "sender_id": "U_Ruby", "sender": "Ruby", "sender_role": "concierge", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Logistics", "text": "Anything else to coordinate?" },
-      { "message_id": "RB010", "timestamp": "2025-02-15T11:38:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Ruby", "receiver": "Ruby", "receiver_role": "concierge", "topic": "Logistics", "text": "All good for now." },
+      // Weekly check-in & member-initiated curiosity
+      { message_id: "RB104", timestamp: "2025-02-16T18:00:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Weekly report", text: "Wins: consistent Z2 3×, wind-down 4 nights. Watchouts: late dinners Tue/Thu; recovery red once." },
+      { message_id: "C104", timestamp: "2025-02-18T08:20:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Carla", receiver: "Carla", receiver_role: "nutrition", topic: "Supplements question", text: "Read about algae oil — any reason to switch from fish oil?" },
+      { message_id: "C105", timestamp: "2025-02-18T08:25:00+08:00", sender_id: "U_Carla", sender: "Carla", sender_role: "nutrition", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Supplements question", text: "Fish oil TG form is fine. Algae is OK if preferred; keep EPA+DHA ~2g." },
+      { message_id: "N101", timestamp: "2025-02-19T12:30:00+08:00", sender_id: "U_Neel", sender: "Neel", sender_role: "lead", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Check-in", text: "Top blocker this week?" },
+      { message_id: "N102", timestamp: "2025-02-19T12:33:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Neel", receiver: "Neel", receiver_role: "lead", topic: "Check-in", text: "Client dinners. Morning sessions help though." },
 
-      // Neel ↔ Rohan (Lead)
-      { "message_id": "N001", "timestamp": "2025-02-18T13:00:00+08:00", "sender_id": "U_Neel", "sender": "Neel", "sender_role": "lead", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Check‑in", "text": "Quick check‑in: top friction this week?" },
-      { "message_id": "N002", "timestamp": "2025-02-18T13:03:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Neel", "receiver": "Neel", "receiver_role": "lead", "topic": "Check‑in", "text": "Late dinners after client meetings." },
-      { "message_id": "N003", "timestamp": "2025-02-18T13:05:00+08:00", "sender_id": "U_Neel", "sender": "Neel", "sender_role": "lead", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Check‑in", "text": "We’ll shift training to mornings and add easy options." },
-      { "message_id": "N004", "timestamp": "2025-02-18T13:07:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Neel", "receiver": "Neel", "receiver_role": "lead", "topic": "Check‑in", "text": "Morning works on non‑travel days." },
-      { "message_id": "N005", "timestamp": "2025-02-18T13:10:00+08:00", "sender_id": "U_Neel", "sender": "Neel", "sender_role": "lead", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Check‑in", "text": "Escalated to Carla for meal plan; Rachel to adjust sessions." },
-      { "message_id": "N006", "timestamp": "2025-02-18T13:12:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Neel", "receiver": "Neel", "receiver_role": "lead", "topic": "Check‑in", "text": "Thanks." },
-      { "message_id": "N007", "timestamp": "2025-02-18T13:20:00+08:00", "sender_id": "U_Neel", "sender": "Neel", "sender_role": "lead", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Feedback", "text": "How’s the app summaries — useful?" },
-      { "message_id": "N008", "timestamp": "2025-02-18T13:22:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Neel", "receiver": "Neel", "receiver_role": "lead", "topic": "Feedback", "text": "Yes, graphs are clear." },
-      { "message_id": "N009", "timestamp": "2025-02-18T13:25:00+08:00", "sender_id": "U_Neel", "sender": "Neel", "sender_role": "lead", "receiver_id": "M0001", "receiver": "Rohan Patel", "receiver_role": "member", "topic": "Feedback", "text": "Great. Ping anytime." },
-      { "message_id": "N010", "timestamp": "2025-02-18T13:26:00+08:00", "sender_id": "M0001", "sender": "Rohan Patel", "sender_role": "member", "receiver_id": "U_Neel", "receiver": "Neel", "receiver_role": "lead", "topic": "Feedback", "text": "Will do." }
+      // =========================
+      // MARCH 2025 (NY trip, post-trip mobility block, ARB trial)
+      // =========================
+
+      // I0006 (NY jet-lag plan)
+      { message_id: "RB201", timestamp: "2025-03-01T09:10:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0006 • NY jet-lag plan", text: "AM light exposure, earlier local dinners, optional 0.5mg melatonin 2 nights only." },
+      { message_id: "RB202", timestamp: "2025-03-01T09:12:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Ruby", receiver: "Ruby", receiver_role: "concierge", topic: "I0006 • NY jet-lag plan", text: "Will follow. Meetings end late Mon/Tue; I’ll keep dinners light." },
+      { message_id: "A201", timestamp: "2025-03-02T20:40:00+08:00", sender_id: "U_Advik", sender: "Advik", sender_role: "performance", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0006 • NY jet-lag plan", text: "If gym crowded, use 3-round bodyweight: 12 squats, 8 push-ups, 30s plank, brisk walk Z2 20 min." },
+      { message_id: "A202", timestamp: "2025-03-02T20:42:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Advik", receiver: "Advik", receiver_role: "performance", topic: "I0006 • NY jet-lag plan", text: "Got it. I’ll cap RPE at 6." },
+
+      // Member curiosity during trip
+      { message_id: "W201", timestamp: "2025-03-05T07:50:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician", topic: "Melatonin safety", text: "Is melatonin safe to use 2–3 nights in a row for jet-lag?" },
+      { message_id: "W202", timestamp: "2025-03-05T08:05:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Melatonin safety", text: "Short stints at low dose are fine. Avoid if groggy the next morning." },
+
+      // I0007 (Post-trip mobility + breathwork)
+      { message_id: "R201", timestamp: "2025-03-15T09:10:00+08:00", sender_id: "U_Rachel", sender: "Rachel", sender_role: "physio", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0007 • Post-trip mobility + breathwork", text: "Let’s do 15-min mobility + 6-min breathwork after each Z2. Aim HRV +2 over 14d." },
+      { message_id: "R202", timestamp: "2025-03-15T09:12:30+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Rachel", receiver: "Rachel", receiver_role: "physio", topic: "I0007 • Post-trip mobility + breathwork", text: "Yes — hips feel tight after flights. I’ll add these." },
+
+      // I0005 (Losartan 25mg trial)
+      { message_id: "W203", timestamp: "2025-03-20T08:40:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0005 • Losartan trial", text: "AM logs show BP spikes. Suggest losartan 25mg nightly x3w. Track orthostatic symptoms daily." },
+      { message_id: "W204", timestamp: "2025-03-20T08:42:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician", topic: "I0005 • Losartan trial", text: "I’m open to it. What side effects?" },
+      { message_id: "W205", timestamp: "2025-03-20T08:45:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0005 • Losartan trial", text: "Possible dizziness. Hydrate, avoid NSAIDs; message me if standing SBP <100 consistently." },
+
+      // Weekly report
+      { message_id: "RB203", timestamp: "2025-03-24T19:00:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Weekly report", text: "Progress: jet-lag plan mostly followed; mobility 4×. Watchouts: two red recovery days after client dinners." },
+
+      // =========================
+      // APRIL 2025 (Seoul travel-proof block, D01 quarterly labs)
+      // =========================
+
+      // I0008 (Travel-proof Z2 + mobility, Seoul)
+      { message_id: "A301", timestamp: "2025-04-09T20:05:00+08:00", sender_id: "U_Advik", sender: "Advik", sender_role: "performance", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0008 • Seoul travel-proof plan", text: "Structure Z2 around flights. On red recovery days, do breathwork + mobility only." },
+      { message_id: "A302", timestamp: "2025-04-09T20:07:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Advik", receiver: "Advik", receiver_role: "performance", topic: "I0008 • Seoul travel-proof plan", text: "Hotel gym might be limited. I’ll default to brisk walks if needed." },
+
+      // D01 (Quarterly panel)
+      { message_id: "RB301", timestamp: "2025-04-14T15:10:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "D01 • Phlebotomy logistics", text: "Lab booked 15 Apr 9:00am. Fasting 10–12h please." },
+      { message_id: "D201", timestamp: "2025-04-15T10:00:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "D01 • Results", text: "LDL-C 118 (↓ from 132), ApoB 99, hs-CRP 1.8. Good early response to plan." },
+      { message_id: "D202", timestamp: "2025-04-15T10:04:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician", topic: "D01 • Results", text: "Great — happy to keep the current nutrition + sleep changes." },
+
+      // I0009 (Fiber + plant sterols; alcohol ≤2/wk)
+      { message_id: "C301", timestamp: "2025-04-20T08:40:00+08:00", sender_id: "U_Carla", sender: "Carla", sender_role: "nutrition", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0009 • Fiber + sterols", text: "Let’s add 30g fiber/day + plant sterols. Alcohol cap ≤2/wk. Expect small LDL/TG drop." },
+      { message_id: "C302", timestamp: "2025-04-20T08:43:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Carla", receiver: "Carla", receiver_role: "nutrition", topic: "I0009 • Fiber + sterols", text: "Understood. Travel week may be tricky; I’ll prep snacks." },
+
+      // Weekly report
+      { message_id: "RB302", timestamp: "2025-04-21T19:10:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Weekly report", text: "Wins: Seoul plan executed; fewer dips. Watchouts: late dinners twice; steps dipped on flight days." },
+
+      // =========================
+      // MAY 2025 (NEAT block + strength-endurance intro)
+      // =========================
+
+      // I0010 (Steps/NEAT)
+      { message_id: "A401", timestamp: "2025-05-05T07:55:00+08:00", sender_id: "U_Advik", sender: "Advik", sender_role: "performance", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0010 • Steps + desk breaks", text: "Aim 10–12k steps; break up 45-min sits with 2-min walks. Expect +2% recovery over 14d." },
+      { message_id: "A402", timestamp: "2025-05-05T07:59:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Advik", receiver: "Advik", receiver_role: "performance", topic: "I0010 • Steps + desk breaks", text: "Standing calls will help. I’ll log averages." },
+
+      // I0011 (Strength-endurance intro)
+      { message_id: "R401", timestamp: "2025-05-19T08:20:00+08:00", sender_id: "U_Rachel", sender: "Rachel", sender_role: "physio", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0011 • Strength-endurance intro", text: "Add 2×/wk light strength (RPE ≤7). Monitor HRV — we want +0~+1 only." },
+      { message_id: "R402", timestamp: "2025-05-19T08:23:30+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Rachel", receiver: "Rachel", receiver_role: "physio", topic: "I0011 • Strength-endurance intro", text: "Sounds good — travel next week, will keep it short." },
+
+      // Weekly report & member curiosity
+      { message_id: "RB401", timestamp: "2025-05-12T18:20:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Weekly report", text: "Wins: steps avg +2k/day. Watchouts: two late nights; one missed mobility session." },
+      { message_id: "W301", timestamp: "2025-05-22T07:35:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician", topic: "Sauna & BP", text: "Is sauna OK with the ARB trial finishing last month?" },
+      { message_id: "W302", timestamp: "2025-05-22T07:50:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Sauna & BP", text: "Short sessions, hydrate, and stand up slowly. Stop if lightheaded." },
+
+      // =========================
+      // JUNE 2025 (Nutrition tweak + caffeine window)
+      // =========================
+
+      // I0012 (Omega-3 dose adjust + sat-fat swap)
+      { message_id: "C501", timestamp: "2025-06-03T08:35:00+08:00", sender_id: "U_Carla", sender: "Carla", sender_role: "nutrition", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0012 • Omega-3 dose + sat-fat swap", text: "Bump omega-3 slightly and swap 5% sat-fat for MUFA. Expect LDL-C −4~−6 by next panel." },
+      { message_id: "C502", timestamp: "2025-06-03T08:38:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Carla", receiver: "Carla", receiver_role: "nutrition", topic: "I0012 • Omega-3 dose + sat-fat swap", text: "Can do. I’ll use olive oil and swap snacks." },
+
+      // I0013 (Caffeine AM-only + wind-down)
+      { message_id: "RB501", timestamp: "2025-06-17T09:00:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0013 • Caffeine window + wind-down", text: "AM-only coffee for 2 weeks. 9:30pm wind-down alarm set." },
+      { message_id: "RB502", timestamp: "2025-06-17T09:02:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Ruby", receiver: "Ruby", receiver_role: "concierge", topic: "I0013 • Caffeine window + wind-down", text: "I’ll stick to mornings. If afternoon slump hits, I’ll walk." },
+
+      // Weekly report & curiosity
+      { message_id: "RB503", timestamp: "2025-06-24T18:25:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Weekly report", text: "Wins: bedtime consistent 5 nights; deep sleep +6 min avg. Watchouts: travel Mon-Tue reduced steps." },
+      { message_id: "A501", timestamp: "2025-06-28T10:15:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Advik", receiver: "Advik", receiver_role: "performance", topic: "Travel kit", text: "Worth packing a light resistance band for hotel rooms?" },
+      { message_id: "A502", timestamp: "2025-06-28T10:22:00+08:00", sender_id: "U_Advik", sender: "Advik", sender_role: "performance", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Travel kit", text: "Yes — great for rows and pull-aparts. I’ll send a 10-min circuit." },
+
+      // =========================
+      // JULY 2025 (Heat/hydration protocol + D02 labs)
+      // =========================
+
+      // I0014 (Heat & hydration protocol for POTS)
+      { message_id: "RB601", timestamp: "2025-07-01T08:20:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0014 • Heat & hydration protocol", text: "Start electrolyte pack AM + pre-cooling with a cold towel before Z2 on hot days." },
+      { message_id: "RB602", timestamp: "2025-07-01T08:22:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Ruby", receiver: "Ruby", receiver_role: "concierge", topic: "I0014 • Heat & hydration protocol", text: "Noted — Singapore humidity is brutal this week." },
+      { message_id: "W401", timestamp: "2025-07-03T07:50:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0014 • Heat & hydration protocol", text: "Hydration + electrolytes should reduce AM head-rushes. Keep logging symptoms." },
+
+      // D02 (Quarterly panel)
+      { message_id: "RB603", timestamp: "2025-07-13T15:15:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "D02 • Phlebotomy logistics", text: "Lab booked 14 Jul 8:30am, fasting. Car pickup at 7:50am." },
+      { message_id: "D301", timestamp: "2025-07-14T11:05:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "D02 • Results", text: "LDL-C 106, ApoB 90, hs-CRP 1.4. Trend continues in the right direction." },
+      { message_id: "D302", timestamp: "2025-07-14T11:08:30+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician", topic: "D02 • Results", text: "Fantastic. Let’s keep building on this." },
+
+      // Weekly report & curiosity
+      { message_id: "RB604", timestamp: "2025-07-21T18:40:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Weekly report", text: "Wins: hydration protocol followed; recovery +3. Watchouts: two late client events." },
+      { message_id: "C601", timestamp: "2025-07-22T08:10:00+08:00", sender_id: "U_Carla", sender: "Carla", sender_role: "nutrition", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0015 • Alcohol moderation", text: "Let’s cap alcohol at ≤2 drinks/week through early Aug; track sleep quality." },
+      { message_id: "C602", timestamp: "2025-07-22T08:12:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Carla", receiver: "Carla", receiver_role: "nutrition", topic: "I0015 • Alcohol moderation", text: "Understood. Client dinners Thu/Fri — I’ll choose low-alcohol options." },
+
+      // =========================
+      // AUGUST 2025 (Seoul v2, sleep consistency)
+      // =========================
+
+      // I0016 (Seoul jet-lag mitigation v2)
+      { message_id: "RB701", timestamp: "2025-08-05T19:05:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0016 • Seoul jet-lag v2", text: "Earlier light + earlier dinners this trip. I’ve blocked evening slots in your calendar." },
+      { message_id: "RB702", timestamp: "2025-08-05T19:07:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Ruby", receiver: "Ruby", sender_role: "concierge", topic: "I0016 • Seoul jet-lag v2", text: "Thanks — meeting stack looks heavy but doable." },
+      { message_id: "A701", timestamp: "2025-08-06T07:55:00+08:00", sender_id: "U_Advik", sender: "Advik", sender_role: "performance", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0016 • Seoul jet-lag v2", text: "Maintain Z2 volume via walks if gym is limited. Keep HR strap on; cap RPE at 6." },
+      { message_id: "A702", timestamp: "2025-08-06T07:58:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Advik", receiver: "Advik", receiver_role: "performance", topic: "I0016 • Seoul jet-lag v2", text: "Copy. I’ll share 2–3 sessions mid-trip." },
+
+      // I0017 (Sleep consistency challenge)
+      { message_id: "RB703", timestamp: "2025-08-20T21:00:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0017 • Sleep consistency challenge", text: "Same bedtime ±15m for 2 weeks. I’ve added reminders." },
+      { message_id: "RB704", timestamp: "2025-08-20T21:02:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Ruby", receiver: "Ruby", sender_role: "concierge", topic: "I0017 • Sleep consistency challenge", text: "Let’s do it. Wednesday may slip due to a dinner." },
+
+      // Weekly report & curiosity
+      { message_id: "RB705", timestamp: "2025-08-26T18:35:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Weekly report", text: "Wins: bedtime consistency 6/7 nights; REM +9m avg. Watchouts: two late nights; one red recovery." },
+      { message_id: "W501", timestamp: "2025-08-27T07:25:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician", topic: "BP query", text: "AM head-rushes rarer now. Keep losartan off post-trial?" },
+      { message_id: "W502", timestamp: "2025-08-27T07:30:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "BP query", text: "Yes, continue off. Hydration protocol + travel plans seem sufficient; we can revisit if symptoms return." },
+
+      // =========================
+      // SEPTEMBER 2025 (Maintenance & taper into D03)
+      // =========================
+
+      // I0018 (Maintenance & taper)
+      { message_id: "A801", timestamp: "2025-09-03T08:15:00+08:00", sender_id: "U_Advik", sender: "Advik", sender_role: "performance", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "I0018 • Maintenance & taper into labs", text: "Keep RPE caps, swap any red-recovery session to mobility. Goal is steady HRV before labs." },
+      { message_id: "A802", timestamp: "2025-09-03T08:17:30+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Advik", receiver: "Advik", receiver_role: "performance", topic: "I0018 • Maintenance & taper into labs", text: "Got it. I’ll avoid pushing pace this fortnight." },
+
+      // D03 (Quarterly panel)
+      { message_id: "RB801", timestamp: "2025-09-28T15:00:00+08:00", sender_id: "U_Ruby", sender: "Ruby", sender_role: "concierge", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "D03 • Phlebotomy logistics", text: "Lab booked 29 Sep 8:30am, fasting; car at 7:50am as usual." },
+      { message_id: "D401", timestamp: "2025-09-29T10:20:00+08:00", sender_id: "U_Warren", sender: "Dr. Warren", sender_role: "physician", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "D03 • Results", text: "LDL-C 101, ApoB 86, hs-CRP 1.3. Solid maintenance with modest incremental gains." },
+      { message_id: "D402", timestamp: "2025-09-29T10:24:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Warren", receiver: "Dr. Warren", receiver_role: "physician", topic: "D03 • Results", text: "Great outcome. Let’s keep this template going into Q4." },
+
+      // Lead wrap-up
+      { message_id: "N201", timestamp: "2025-09-30T13:00:00+08:00", sender_id: "U_Neel", sender: "Neel", sender_role: "lead", receiver_id: "M0001", receiver: "Rohan Patel", receiver_role: "member", topic: "Quarter wrap-up", text: "Congrats — LDL/ApoB trend sustained, sleep consistency up. Any friction you want us to remove next?" },
+      { message_id: "N202", timestamp: "2025-09-30T13:03:00+08:00", sender_id: "M0001", sender: "Rohan Patel", sender_role: "member", receiver_id: "U_Neel", receiver: "Neel", receiver_role: "lead", topic: "Quarter wrap-up", text: "Evening meetings are the big one. Calendar holds helped — let’s keep those." }
     ],
 
     rationales: [
+      // ── Q1 ─────────────────────────────────────────────────────────────────
       {
         decision_type: "Exercise", decision_id: "I0001", date: "2025-01-30", member_id: "M0001",
-        reason_summary: "Improve autonomic tone and mobility foundations; address posture/breathing.",
-        evidence_message_ids: ["R001", "R002"] // Rachel ↔ Rohan
+        reason_summary: "Kickstart Zone 2 and mobility to build autonomic tone; control RPE and posture to reduce HR spikes.",
+        evidence_message_ids: ["R101", "R102"]
       },
       {
         decision_type: "Nutrition", decision_id: "I0002", date: "2025-02-01", member_id: "M0001",
-        reason_summary: "Lower LDL-C and support sleep (caffeine cutoff) to aid recovery.",
-        evidence_message_ids: ["C001", "C002"] // Carla ↔ Rohan
+        reason_summary: "Add omega-3 (TG form) and move caffeine to AM to lower LDL-C and improve sleep/recovery.",
+        evidence_message_ids: ["C101", "C102", "C103"]
+      },
+      {
+        decision_type: "Sleep & Recovery", decision_id: "I0003", date: "2025-02-10", member_id: "M0001",
+        reason_summary: "Evening wind-down, warm light, and pre-bed breathing to stabilize sleep and reduce arousal.",
+        evidence_message_ids: ["RB101", "RB102", "R103"]
+      },
+      {
+        decision_type: "Travel Plan", decision_id: "I0004", date: "2025-02-02", member_id: "M0001",
+        reason_summary: "London micro-plan: Z2 via brisk walks/bodyweight with RPE cap to protect HRV during travel.",
+        evidence_message_ids: ["A101", "A102"]
+      },
+      {
+        decision_type: "Diagnostic", decision_id: "D00", date: "2025-02-12", member_id: "M0001",
+        reason_summary: "Baseline panel to quantify LDL-C/ApoB/hs-CRP and anchor subsequent interventions.",
+        evidence_message_ids: ["RB103", "D101", "D102"]
+      },
+
+      // ── Q2 (Mar–Apr) ──────────────────────────────────────────────────────
+      {
+        decision_type: "Travel Plan", decision_id: "I0006", date: "2025-03-01", member_id: "M0001",
+        reason_summary: "NY jet-lag plan with AM light, earlier dinners, brief melatonin, and Z2 alternatives.",
+        evidence_message_ids: ["RB201", "RB202", "A201", "A202"]
+      },
+      {
+        decision_type: "Exercise", decision_id: "I0007", date: "2025-03-15", member_id: "M0001",
+        reason_summary: "Post-trip mobility + 6-min breathwork after Z2 to offset stiffness and nudge HRV up.",
+        evidence_message_ids: ["R201", "R202"]
       },
       {
         decision_type: "Medication", decision_id: "I0005", date: "2025-03-20", member_id: "M0001",
-        reason_summary: "Short ARB trial to improve orthostatic symptoms and recovery.",
-        evidence_message_ids: ["W001", "W002"] // Dr. Warren ↔ Rohan
+        reason_summary: "Short losartan 25mg nightly trial to blunt AM BP spikes and reduce orthostatic symptoms.",
+        evidence_message_ids: ["W203", "W204", "W205"]
       },
       {
         decision_type: "Exercise", decision_id: "I0008", date: "2025-04-10", member_id: "M0001",
-        reason_summary: "Maintain HRV during travel; reduce dips via mobility add-ons.",
-        evidence_message_ids: ["A001", "A002"] // Advik ↔ Rohan
+        reason_summary: "Seoul travel-proof Z2 with mobility/breathwork on red-recovery days to prevent dips.",
+        evidence_message_ids: ["A301", "A302"]
       },
       {
         decision_type: "Diagnostic", decision_id: "D01", date: "2025-04-15", member_id: "M0001",
-        reason_summary: "Quantify risk and track ApoB/LDL-C/hs-CRP changes after interventions.",
-        evidence_message_ids: ["D001", "D002"] // Diagnostic results thread
+        reason_summary: "Quarterly panel to confirm LDL-C/ApoB response to omega-3 + sleep changes.",
+        evidence_message_ids: ["RB301", "D201", "D202"]
+      },
+      {
+        decision_type: "Nutrition", decision_id: "I0009", date: "2025-04-20", member_id: "M0001",
+        reason_summary: "Increase fiber to 30g/day + plant sterols; moderate alcohol to support LDL/TG trend.",
+        evidence_message_ids: ["C301", "C302"]
+      },
+
+      // ── May ────────────────────────────────────────────────────────────────
+      {
+        decision_type: "Exercise", decision_id: "I0010", date: "2025-05-05", member_id: "M0001",
+        reason_summary: "Boost NEAT: 10–12k steps/day and break prolonged sitting to lift recovery.",
+        evidence_message_ids: ["A401", "A402"]
+      },
+      {
+        decision_type: "Exercise", decision_id: "I0011", date: "2025-05-19", member_id: "M0001",
+        reason_summary: "Introduce 2×/week strength-endurance at RPE ≤7; protect HRV while building capacity.",
+        evidence_message_ids: ["R401", "R402"]
+      },
+
+      // ── June ───────────────────────────────────────────────────────────────
+      {
+        decision_type: "Nutrition", decision_id: "I0012", date: "2025-06-03", member_id: "M0001",
+        reason_summary: "Slight omega-3 bump and sat-fat→MUFA swap to continue LDL-C reduction.",
+        evidence_message_ids: ["C501", "C502"]
+      },
+      {
+        decision_type: "Sleep & Recovery", decision_id: "I0013", date: "2025-06-17", member_id: "M0001",
+        reason_summary: "AM-only caffeine and consistent 9:30pm wind-down to improve deep sleep and recovery.",
+        evidence_message_ids: ["RB501", "RB502"]
+      },
+
+      // ── July (Heat protocol + labs) ────────────────────────────────────────
+      {
+        decision_type: "Lifestyle Protocol", decision_id: "I0014", date: "2025-07-01", member_id: "M0001",
+        reason_summary: "Heat/hydration protocol (electrolytes + pre-cool) to reduce POTS-related head-rushes.",
+        evidence_message_ids: ["RB601", "RB602", "W401"]
+      },
+      {
+        decision_type: "Diagnostic", decision_id: "D02", date: "2025-07-14", member_id: "M0001",
+        reason_summary: "Quarterly panel to verify continued improvements in LDL-C/ApoB and inflammation.",
+        evidence_message_ids: ["RB603", "D301", "D302"]
+      },
+      {
+        decision_type: "Nutrition", decision_id: "I0015", date: "2025-07-22", member_id: "M0001",
+        reason_summary: "Cap alcohol at ≤2/week to protect sleep quality and cardiometabolic markers.",
+        evidence_message_ids: ["C601", "C602"]
+      },
+
+      // ── August (Seoul v2 + sleep consistency) ──────────────────────────────
+      {
+        decision_type: "Travel Plan", decision_id: "I0016", date: "2025-08-05", member_id: "M0001",
+        reason_summary: "Seoul jet-lag v2: calendar holds for earlier dinners, AM light, Z2 via walks if needed.",
+        evidence_message_ids: ["RB701", "RB702", "A701", "A702"]
+      },
+      {
+        decision_type: "Sleep & Recovery", decision_id: "I0017", date: "2025-08-20", member_id: "M0001",
+        reason_summary: "Bedtime consistency ±15 min for 2 weeks to stabilize REM and recovery.",
+        evidence_message_ids: ["RB703", "RB704"]
+      },
+
+      // ── September (taper + quarterly labs) ────────────────────────────────
+      {
+        decision_type: "Exercise", decision_id: "I0018", date: "2025-09-03", member_id: "M0001",
+        reason_summary: "Maintenance with RPE caps and mobility swaps on red days to keep HRV steady pre-labs.",
+        evidence_message_ids: ["A801", "A802"]
+      },
+      {
+        decision_type: "Diagnostic", decision_id: "D03", date: "2025-09-29", member_id: "M0001",
+        reason_summary: "Quarterly panel to confirm sustained LDL/ApoB improvements and low inflammation.",
+        evidence_message_ids: ["RB801", "D401", "D402"]
       }
     ],
     // Inside EMBED's base object (or assign to base.internal_metrics = [...] after base is declared)
     internal_metrics: [
-      // Week of 2025-03-03
-      { week_start: "2025-03-03", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.8 },
-      { week_start: "2025-03-03", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.2 },
-      { week_start: "2025-03-03", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.6 },
-      { week_start: "2025-03-03", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
-      { week_start: "2025-03-03", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
-      { week_start: "2025-03-03", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.3 },
-
-      // Week of 2025-03-10
-      { week_start: "2025-03-10", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.1 },
-      { week_start: "2025-03-10", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.5 },
-      { week_start: "2025-03-10", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.9 },
-      { week_start: "2025-03-10", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.8 },
-      { week_start: "2025-03-10", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.5 },
-      { week_start: "2025-03-10", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.4 },
-
-      // Week of 2025-03-17
-      { week_start: "2025-03-17", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.6 },
-      { week_start: "2025-03-17", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.1 },
-      { week_start: "2025-03-17", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.4 },
-      { week_start: "2025-03-17", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.5 },
-      { week_start: "2025-03-17", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.2 },
-      { week_start: "2025-03-17", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.2 },
-
-      // Week of 2025-03-24
-      { week_start: "2025-03-24", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.0 },
-      { week_start: "2025-03-24", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.7 },
-      { week_start: "2025-03-24", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.0 },
-      { week_start: "2025-03-24", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 2.0 },
-      { week_start: "2025-03-24", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.8 },
-      { week_start: "2025-03-24", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.6 },
-
-      // Week of 2025-03-31
-      { week_start: "2025-03-31", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.2 },
-      { week_start: "2025-03-31", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 1.9 },
-      { week_start: "2025-03-31", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.0 },
-      { week_start: "2025-03-31", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.3 },
-      { week_start: "2025-03-31", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.1 },
-      { week_start: "2025-03-31", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.0 },
-
-      // Week of 2025-04-07
+      // ───────────────── April 2025 (kept exactly as your sample) ─────────────────
+      // Week of 2025-04-07 (Seoul travel + prep)
       { week_start: "2025-04-07", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.3 },
       { week_start: "2025-04-07", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.6 },
       { week_start: "2025-04-07", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.1 },
@@ -364,7 +903,7 @@ const EMBED = (() => {
       { week_start: "2025-04-07", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 2.0 },
       { week_start: "2025-04-07", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.8 },
 
-      // Week of 2025-04-14
+      // Week of 2025-04-14 (D01 labs 04-15)
       { week_start: "2025-04-14", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.7 },
       { week_start: "2025-04-14", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.3 },
       { week_start: "2025-04-14", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.7 },
@@ -386,9 +925,237 @@ const EMBED = (() => {
       { week_start: "2025-04-28", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.8 },
       { week_start: "2025-04-28", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.7 },
       { week_start: "2025-04-28", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.6 },
-      { week_start: "2025-04-28", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.7 }
-    ],
+      { week_start: "2025-04-28", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.7 },
 
+      // ───────────────── May 2025 ─────────────────
+      // 05-05 Travel (London) + NEAT push (I0010 starts)
+      { week_start: "2025-05-05", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.2 },
+      { week_start: "2025-05-05", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.5 },
+      { week_start: "2025-05-05", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.0 },
+      { week_start: "2025-05-05", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.9 },
+      { week_start: "2025-05-05", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-05-05", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.7 },
+
+      { week_start: "2025-05-12", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.8 },
+      { week_start: "2025-05-12", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.3 },
+      { week_start: "2025-05-12", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.6 },
+      { week_start: "2025-05-12", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-05-12", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.3 },
+      { week_start: "2025-05-12", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.3 },
+
+      // 05-19 Strength-endurance (I0011)
+      { week_start: "2025-05-19", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.0 },
+      { week_start: "2025-05-19", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.1 },
+      { week_start: "2025-05-19", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.9 },
+      { week_start: "2025-05-19", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.7 },
+      { week_start: "2025-05-19", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.9 },
+      { week_start: "2025-05-19", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.4 },
+
+      { week_start: "2025-05-26", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.6 },
+      { week_start: "2025-05-26", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.5 },
+      { week_start: "2025-05-26", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.5 },
+      { week_start: "2025-05-26", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.5 },
+      { week_start: "2025-05-26", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-05-26", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.2 },
+
+      // ───────────────── June 2025 ─────────────────
+      // 06-02 Travel (New York) + Nutrition swap (I0012)
+      { week_start: "2025-06-02", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.4 },
+      { week_start: "2025-06-02", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.6 },
+      { week_start: "2025-06-02", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.1 },
+      { week_start: "2025-06-02", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 2.2 },
+      { week_start: "2025-06-02", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.3 },
+      { week_start: "2025-06-02", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.8 },
+
+      { week_start: "2025-06-09", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.7 },
+      { week_start: "2025-06-09", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.4 },
+      { week_start: "2025-06-09", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.6 },
+      { week_start: "2025-06-09", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.8 },
+      { week_start: "2025-06-09", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.5 },
+      { week_start: "2025-06-09", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.3 },
+
+      // 06-16 Sleep/wind-down refresh (I0013)
+      { week_start: "2025-06-16", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.1 },
+      { week_start: "2025-06-16", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.1 },
+      { week_start: "2025-06-16", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.7 },
+      { week_start: "2025-06-16", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.7 },
+      { week_start: "2025-06-16", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.6 },
+      { week_start: "2025-06-16", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.4 },
+
+      { week_start: "2025-06-23", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.6 },
+      { week_start: "2025-06-23", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.3 },
+      { week_start: "2025-06-23", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.4 },
+      { week_start: "2025-06-23", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.5 },
+      { week_start: "2025-06-23", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-06-23", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.2 },
+
+      { week_start: "2025-06-30", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.0 },
+      { week_start: "2025-06-30", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.5 }, // heat protocol kickoff support
+      { week_start: "2025-06-30", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.8 },
+      { week_start: "2025-06-30", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.7 },
+      { week_start: "2025-06-30", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.5 },
+      { week_start: "2025-06-30", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.5 },
+
+      // ───────────────── July 2025 ─────────────────
+      { week_start: "2025-07-07", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.8 },
+      { week_start: "2025-07-07", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.6 }, // pre-labs
+      { week_start: "2025-07-07", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.5 },
+      { week_start: "2025-07-07", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.8 },
+      { week_start: "2025-07-07", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-07-07", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.4 },
+
+      // 07-14 D02 labs week
+      { week_start: "2025-07-14", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.1 },
+      { week_start: "2025-07-14", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 3.2 },
+      { week_start: "2025-07-14", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.8 },
+      { week_start: "2025-07-14", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 2.2 },
+      { week_start: "2025-07-14", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.6 },
+      { week_start: "2025-07-14", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.7 },
+
+      // 07-21 Travel + alcohol cap (I0015)
+      { week_start: "2025-07-21", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.4 },
+      { week_start: "2025-07-21", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.7 },
+      { week_start: "2025-07-21", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.0 },
+      { week_start: "2025-07-21", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 2.1 },
+      { week_start: "2025-07-21", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.5 },
+      { week_start: "2025-07-21", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.8 },
+
+      { week_start: "2025-07-28", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.6 },
+      { week_start: "2025-07-28", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.2 },
+      { week_start: "2025-07-28", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.4 },
+      { week_start: "2025-07-28", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-07-28", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.3 },
+      { week_start: "2025-07-28", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.2 },
+
+      // ───────────────── August 2025 ─────────────────
+      // 08-04 Travel (Seoul v2) + travel plan (I0016)
+      { week_start: "2025-08-04", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.5 },
+      { week_start: "2025-08-04", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.6 },
+      { week_start: "2025-08-04", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.2 },
+      { week_start: "2025-08-04", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.9 },
+      { week_start: "2025-08-04", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-08-04", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.9 },
+
+      { week_start: "2025-08-11", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.7 },
+      { week_start: "2025-08-11", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.2 },
+      { week_start: "2025-08-11", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.6 },
+      { week_start: "2025-08-11", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.5 },
+      { week_start: "2025-08-11", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.3 },
+      { week_start: "2025-08-11", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.2 },
+
+      // 08-18 Sleep consistency (I0017)
+      { week_start: "2025-08-18", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.0 },
+      { week_start: "2025-08-18", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.4 },
+      { week_start: "2025-08-18", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.5 },
+      { week_start: "2025-08-18", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-08-18", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.5 },
+      { week_start: "2025-08-18", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.4 },
+
+      { week_start: "2025-08-25", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.6 },
+      { week_start: "2025-08-25", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.1 },
+      { week_start: "2025-08-25", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.3 },
+      { week_start: "2025-08-25", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.4 },
+      { week_start: "2025-08-25", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.2 },
+      { week_start: "2025-08-25", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.1 },
+
+      // ───────────────── September 2025 ─────────────────
+      // 09-01 Maintenance (I0018) + pre-labs stabilization
+      { week_start: "2025-09-01", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.9 },
+      { week_start: "2025-09-01", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.5 },
+      { week_start: "2025-09-01", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.9 },
+      { week_start: "2025-09-01", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-09-01", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.8 },
+      { week_start: "2025-09-01", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.5 },
+
+      // 09-08 Travel (London)
+      { week_start: "2025-09-08", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.3 },
+      { week_start: "2025-09-08", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.6 },
+      { week_start: "2025-09-08", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.1 },
+      { week_start: "2025-09-08", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.9 },
+      { week_start: "2025-09-08", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-09-08", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.8 },
+
+      { week_start: "2025-09-15", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.7 },
+      { week_start: "2025-09-15", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.3 },
+      { week_start: "2025-09-15", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.5 },
+      { week_start: "2025-09-15", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-09-15", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-09-15", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.3 },
+
+      { week_start: "2025-09-22", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.8 },
+      { week_start: "2025-09-22", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.4 },
+      { week_start: "2025-09-22", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.6 },
+      { week_start: "2025-09-22", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-09-22", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.5 },
+      { week_start: "2025-09-22", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.4 },
+
+      // 09-29 D03 labs week
+      { week_start: "2025-09-29", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.2 },
+      { week_start: "2025-09-29", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 3.3 },
+      { week_start: "2025-09-29", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.9 },
+      { week_start: "2025-09-29", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 2.3 },
+      { week_start: "2025-09-29", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.6 },
+      { week_start: "2025-09-29", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.9 },
+
+      // ───────────────── October 2025 ─────────────────
+      // 10-06 Travel (New York)
+      { week_start: "2025-02-06", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.4 },
+      { week_start: "2025-02-06", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.6 },
+      { week_start: "2025-02-06", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.1 },
+      { week_start: "2025-02-06", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 2.0 },
+      { week_start: "2025-02-06", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-02-06", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.8 },
+
+      { week_start: "2025-02-13", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.7 },
+      { week_start: "2025-02-13", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.4 },
+      { week_start: "2025-02-13", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.6 },
+      { week_start: "2025-02-13", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-02-13", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-02-13", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.3 },
+
+      { week_start: "2025-02-20", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.5 },
+      { week_start: "2025-02-20", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.0 },
+      { week_start: "2025-02-20", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.3 },
+      { week_start: "2025-02-20", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.5 },
+      { week_start: "2025-02-20", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.2 },
+      { week_start: "2025-02-20", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.1 },
+
+      { week_start: "2025-02-27", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.8 },
+      { week_start: "2025-02-27", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.5 },
+      { week_start: "2025-02-27", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.5 },
+      { week_start: "2025-02-27", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-02-27", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-02-27", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.3 },
+
+      // ───────────────── November 2025 ─────────────────02     // 11-03 Travel (Jakarta)
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 5.3 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.5 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 3.0 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.9 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.3 },
+      { week_start: "2025-03-03", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.8 },
+
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.7 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.3 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.4 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.5 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.3 },
+      { week_start: "2025-03-10", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.2 },
+
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.6 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.0 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.2 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.4 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.2 },
+      { week_start: "2025-03-17", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.1 },
+
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Ruby", role: "Concierge/Orchestrator", hours: 4.9 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Dr. Warren", role: "Medical Strategist", hours: 2.4 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Advik", role: "Performance Scientist", hours: 2.5 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Carla", role: "Nutritionist", hours: 1.6 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Rachel", role: "Physiotherapist", hours: 1.4 },
+      { week_start: "2025-03-24", member_id: "M0001", team_member: "Neel", role: "Concierge Lead", hours: 1.3 }
+    ]
 
   };
 
@@ -2188,8 +2955,8 @@ export default function App() {
       if (!sc) return;
       const el = msgRefs.current.get(focusMsgId);
       if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
-      const t = setTimeout(() => onClearFocus?.(), 1400);
-      return () => clearTimeout(t);
+      // const t = setTimeout(() => onClearFocus?.(), 1400);
+      // return () => clearTimeout(t);
     }, [open, focusMsgId, onClearFocus]);
 
     const bubbleTint = peer.color || "#64748b";
